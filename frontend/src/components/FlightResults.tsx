@@ -1,62 +1,87 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { RecepcionInfo, FlightResult } from '@/types/flight';
+// app/api/flights/route.ts
+import { NextResponse } from 'next/server';
 import { skyscannerService } from '@/lib/skyscanner';
+import { FlightResultData } from '@/types/flight';
 
-interface Props {
-  data: RecepcionInfo;
-}
+export async function POST(req: Request) {
+  try {
+    const { cityCode, adults, date } = await req.json();
 
-export default function FlightResults({ data }: Props) {
-  const [results, setResults] = useState<FlightResult[]>([]);
-  const [loading, setLoading] = useState(false);
+    if (!cityCode || !date) {
+      return NextResponse.json({ error: 'Faltan parámetros' }, { status: 400 });
+    }
 
-  useEffect(() => {
-    const fetchAllFlights = async () => {
-      setLoading(true);
-      const tempResults: FlightResult[] = [];
+    // 1. Crear sesión
+    const sessionData = await skyscannerService.createFlightSearch({
+      originCode: 'BCN', // Cambiado a BCN por coherencia con el proyecto, o MAD
+      destCode: cityCode,
+      adults: adults || 1,
+      date: date
+    });
 
-      for (const item of data.destinos) {
-        try {
-          const iata = await skyscannerService.getIataCode(item.ciudad);
-          if (!iata) throw new Error("No se encontró código IATA");
+    const sessionToken = sessionData.sessionToken;
+    if (!sessionToken) throw new Error("No session token received");
 
-          const session = await skyscannerService.createSession(iata);
-          
-          // Nota: El polling requiere un segundo POST al endpoint /poll/{token}
-          // Aquí simulamos la recepción del primer precio disponible
-          tempResults.push({
-            ciudad: item.ciudad,
-            precio: "Consultando..." // Aquí iría la lógica del poll
-          });
-        } catch (err) {
-          tempResults.push({ ciudad: item.ciudad, error: "No disponible" });
+    // 2. Poll (Intento simplificado)
+    const API_KEY = process.env.SKYSCANNER_KEY;
+    
+    // Esperamos un poco para que Skyscanner tenga algo que darnos
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const pollResponse = await fetch(
+      `https://partners.api.skyscanner.net/apiservices/v3/flights/live/search/poll/${sessionToken}`,
+      {
+        method: 'POST',
+        headers: { 
+          'x-api-key': API_KEY!,
+          'Content-Type': 'application/json'
         }
       }
-      setResults(tempResults);
-      setLoading(false);
+    );
+
+    const data = await pollResponse.json();
+
+    // 3. Transformar resultados
+    const formattedFlights = parseSkyscannerResults(data);
+
+    // Si no hay vuelos, devolvemos un 200 con array vacío para que el frontal no explote
+    return NextResponse.json(formattedFlights);
+
+  } catch (error: any) {
+    console.error("CRITICAL API ERROR:", error.message);
+    return NextResponse.json({ error: 'Error obteniendo vuelos' }, { status: 500 });
+  }
+}
+
+function parseSkyscannerResults(data: any): FlightResultData[] {
+  const results = data.content?.results;
+  if (!results || !results.itineraries) return [];
+
+  const { itineraries, legs, carriers, places } = results;
+
+  return Object.values(itineraries).map((item: any) => {
+    const legId = item.legIds[0];
+    const leg = legs[legId];
+    const carrierId = leg.marketingCarrierIds[0];
+    const carrier = carriers[carrierId];
+    
+    // Opcional: Obtener nombre de aeropuertos desde 'places'
+    const originName = places[leg.originPlaceId]?.name || leg.originPlaceId;
+    const destName = places[leg.destinationPlaceId]?.name || leg.destinationPlaceId;
+
+    return {
+      id: item.id,
+      price: item.pricingOptions[0]?.price?.amount / 1000, 
+      currency: 'EUR',
+      origin: originName,
+      destination: destName,
+      departure: leg.departureDateTime,
+      arrival: leg.arrivalDateTime,
+      stops: leg.stopCount,
+      durationMinutes: leg.durationInMinutes,
+      airlineName: carrier?.name || 'Multiple Airlines',
+      airlineLogo: carrier?.imageUrl || 'https://www.skyscanner.net/images/airline_logos/default.png',
+      bookingUrl: item.pricingOptions[0]?.items[0]?.deepLink
     };
-
-    if (data.destinos.length > 0) fetchAllFlights();
-  }, [data]);
-
-  return (
-    <div className="p-6 border rounded-lg bg-white shadow-sm">
-      <h2 className="text-xl font-bold mb-4">
-        Vuelos para tus {data.num_imagenes} destinos
-      </h2>
-      
-      {loading && <p className="animate-pulse">Buscando en Skyscanner...</p>}
-
-      <div className="grid gap-4">
-        {results.map((r, i) => (
-          <div key={i} className="flex justify-between border-b py-2">
-            <span className="font-medium">{r.ciudad}</span>
-            <span className="text-blue-600">{r.precio || r.error}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  }).sort((a, b) => a.price - b.price).slice(0, 5); // Solo los 5 más baratos
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Coffee, Ticket } from "lucide-react";
-import FlightResults from '@/components/FlightResults';
+import { FlightResults } from '@/components/FlightResults';
 import { RecepcionInfo } from '@/types/flight';
 
 // Adaptem el tipus segons el que ens retorna el nou endpoint
