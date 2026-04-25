@@ -1,4 +1,6 @@
 import Image from "next/image";
+import FlightResults from '@/components/FlightResults';
+import { RecepcionInfo } from '@/types/flight';
 
 export default function Home() {
   return (
@@ -61,5 +63,23 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function HomePage() {
+  // Simulación de la info JSON que recibes
+  const infoRecibida: RecepcionInfo = {
+    num_imagenes: 3,
+    destinos: [
+      { pais: "Francia", ciudad: "Paris" },
+      { pais: "Japón", ciudad: "Tokyo" }
+    ]
+  };
+
+  return (
+    <main className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-8 text-center">Planificador de Viajes</h1>
+      <FlightResults data={infoRecibida} />
+    </main>
   );
 }
