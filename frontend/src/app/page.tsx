@@ -68,7 +68,8 @@ export default function Home() {
       
       // Suposem que el backend retorna { "recommendations": [...] } o directament l'array
       // Si la clau és diferent, canvia 'data.recommendations' per la que toqui
-      const destinosRecibidos = data.recommendations || data.destinos || data;
+      const destinosRecibidos = data.destination;
+      const images = data.images.analyzed;
 
       setResult(destinosRecibidos);
 
