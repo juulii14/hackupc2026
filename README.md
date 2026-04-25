@@ -11,7 +11,7 @@ A web application that recommends travel destinations based on **images** or **m
 
 ### 🎵 Music-Based Recommendations
 - Enter an artist and a song
-- Musical tags are assigned to the song (for example: by genre, mood, energy, etc.)
+- Musical tags are assigned to the song (e.g., genre, mood, energy, etc.)
 - Receive travel destination suggestions alignes with the song's vibe
 
 ## 🛠️ Tools
