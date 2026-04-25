@@ -1,26 +1,35 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #f4f1ea; /* Color paper càlid */
+  color: #1a1a1a;
+}
+
+/* Fons de quadrícula tipus llibreta */
+.graph-paper {
+  background-image: 
+    linear-gradient(#e5e0d5 1px, transparent 1px),
+    linear-gradient(90deg, #e5e0d5 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Efecte Polaroid */
+.polaroid {
+  background: white;
+  padding: 10px 10px 30px 10px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: rotate(var(--rotation));
+  transition: transform 0.3s ease;
+}
+
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.05);
+  z-index: 50;
+}
+
+/* Font tipus escrita a mà per a detalls (opcional si vols importar una de Google) */
+.handwritten {
+  font-family: 'Comic Sans MS', 'cursive'; /* O una de Google Fonts com 'Permanent Marker' */
 }
