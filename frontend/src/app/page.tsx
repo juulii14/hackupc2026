@@ -52,7 +52,7 @@ export default function Home() {
     const mockData = {
       destinations: [
         {
-          city: "Cancun",
+          city: "Cancún",
           country: "Mexico",
           reason: "Vibra tropical i platja perfecte per al gener.",
           imageUrl: `https://loremflickr.com/400/600/cancun,landscape/all?lock=1`

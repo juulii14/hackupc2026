@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Plane, Clock, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
+import { Plane, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
 import { FlightResultData } from '@/types/flight';
 
 interface FlightResultsProps {
@@ -15,52 +15,65 @@ export default function FlightResults({ data }: FlightResultsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Función para convertir minutos a formato "Xh Ymin"
+  const formatDuration = (totalMinutes: number) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours}h ${minutes > 0 ? `${minutes}min` : ''}`;
+  };
+
   useEffect(() => {
     const fetchFlights = async () => {
+      if (!data?.destinos || data.destinos.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
       try {
-        // Agafem la primera ciutat de la llista per buscar vols
         const destination = data.destinos[0].ciudad;
-        
-        // Simulem una data de viatge (per exemple, d'aquí a 2 mesos)
-        const travelDate = "2024-09-15"; 
+        const travelDate = "2026-09-15"; 
 
         const response = await fetch('/api/flights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            cityCode: destination, // El teu backend rep la ciutat
+            cityCode: destination,
             adults: 1,
             date: travelDate
           }),
         });
 
-        if (!response.ok) throw new Error('No hem pogut trobar vols ara mateix');
-
         const result = await response.json();
         
-        if (result.error) throw new Error(result.error);
-        
-        setFlights(result);
+        if (!response.ok) throw new Error(result.error || "Failed to fetch flights");
+
+        if (Array.isArray(result)) {
+          setFlights(result);
+        } else if (result && typeof result === 'object' && Array.isArray(result.flights)) {
+          setFlights(result.flights);
+        } else {
+          setFlights([]);
+        }
+
       } catch (err: any) {
         setError(err.message);
+        setFlights([]); 
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (data.destinos.length > 0) {
-      fetchFlights();
-    }
+    fetchFlights();
   }, [data]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
         <Loader2 className="w-8 h-8 animate-spin text-[#0072ce]" />
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Buscant les millors ofertes...</p>
+        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Searching for the best offers...</p>
       </div>
     );
   }
@@ -74,10 +87,10 @@ export default function FlightResults({ data }: FlightResultsProps) {
     );
   }
 
-  if (flights.length === 0) {
+  if (!Array.isArray(flights) || flights.length === 0) {
     return (
       <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-        <p className="text-slate-500 italic">No s'han trobat vols directes per aquesta data.</p>
+        <p className="text-slate-500 italic">No flights were found for this destination.</p>
       </div>
     );
   }
@@ -87,10 +100,10 @@ export default function FlightResults({ data }: FlightResultsProps) {
       {flights.map((flight) => (
         <div key={flight.id} className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center justify-between gap-6">
           
-          {/* Airline Info */}
+          {/* Info Aerolínea */}
           <div className="flex items-center gap-4 w-full md:w-auto">
             <img 
-              src={flight.airlineLogo} 
+              src={flight.airlineLogo || 'https://www.skyscanner.net/images/airline_logos/default.png'} 
               alt={flight.airlineName}
               className="w-12 h-12 object-contain rounded-lg border border-slate-50 p-1"
             />
@@ -100,32 +113,41 @@ export default function FlightResults({ data }: FlightResultsProps) {
             </div>
           </div>
 
-          {/* Route & Time */}
+          {/* Ruta y Duración */}
           <div className="flex items-center gap-8 text-center">
             <div>
-              <p className="text-lg font-black text-slate-900">{new Date(flight.departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-lg font-black text-slate-900">
+                {flight.departure ? new Date(flight.departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              </p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{flight.origin}</p>
             </div>
             
             <div className="flex flex-col items-center gap-1 min-w-[100px]">
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{flight.durationMinutes} min</span>
+              {/* Aquí usamos la nueva función de formato de duración */}
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                {formatDuration(flight.durationMinutes)}
+              </span>
               <div className="w-full h-[2px] bg-slate-100 relative">
                 <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0072ce]" />
               </div>
-              <span className="text-[10px] font-bold text-[#0072ce] uppercase">{flight.stops === 0 ? 'Directe' : `${flight.stops} escala`}</span>
+              <span className="text-[10px] font-bold text-[#0072ce] uppercase">
+                {flight.stops === 0 ? 'Direct' : `${flight.stops} ${flight.stops === 1 ? 'stop' : 'stops'}`}
+              </span>
             </div>
 
             <div>
-              <p className="text-lg font-black text-slate-900">{new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+              <p className="text-lg font-black text-slate-900">
+                {flight.arrival ? new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              </p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{flight.destination}</p>
             </div>
           </div>
 
-          {/* Price & Action */}
+          {/* Precio y Reserva */}
           <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
             <div className="text-right">
               <p className="text-2xl font-black text-[#0072ce] tracking-tighter">{Math.round(flight.price)} €</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preu final</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Final price</p>
             </div>
             
             <a 
@@ -134,7 +156,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
               rel="noopener noreferrer"
               className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-[#0072ce] transition-all shadow-lg shadow-slate-200"
             >
-              RESERVAR <ExternalLink size={14} />
+              BOOK NOW <ExternalLink size={14} />
             </a>
           </div>
         </div>
