@@ -1,28 +1,20 @@
 # app/services/song_analyzer.py
 import json
 from app.core.ollama_client import OllamaClient
-from app.config import settings
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 SONG_PROMPT = """
-You are a travel expert. Based on these Spotify audio features of a song, 
-recommend travel destinations that match the mood, energy and style of the music.
+You are a travel expert. Based on the song "{artist} - {track}" and its musical tags, 
+recommend 5 travel destinations.
 
-Audio features:
-- Energy: {energy} (0=calm, 1=intense)
-- Valence: {valence} (0=sad/dark, 1=happy/euphoric)
-- Danceability: {danceability} (0=not danceable, 1=very danceable)
-- Tempo: {tempo} BPM
-- Acousticness: {acousticness} (0=electronic, 1=acoustic)
-- Instrumentalness: {instrumentalness} (0=vocals, 1=instrumental)
+Musical tags: {tags}
 
-IMPORTANT: Recommend destinations where the local music, culture and atmosphere 
-matches the mood of this song. For example:
-- High energy + high danceability → Latin America, Caribbean
-- Low valence + acoustic → Scandinavian countries, Iceland
-- High valence + high tempo → Brazil, Spain, Italy
+Use the tags as the main factor to determine the mood, energy and style.
+Use your knowledge about the song's theme and cultural origin as a secondary factor.
+
+Make sure that the cities you recommend have an aerport.
 
 Return ONLY a JSON with this structure:
 {{
@@ -30,7 +22,7 @@ Return ONLY a JSON with this structure:
     {{
       "city": "string",
       "country": "string",
-      "reason": "string (why this destination matches the song's mood)"
+      "reason": "string (why this destination matches the song)"
     }}
   ]
 }}
@@ -41,16 +33,12 @@ class SongAnalyzer:
     def __init__(self, ollama_client: OllamaClient):
         self.client = ollama_client
 
-    async def analyze(self, audio_features: dict) -> list[dict]:
+    async def analyze(self, tags: list[str], artist: str, track: str) -> list[dict]:
         prompt = SONG_PROMPT.format(
-            energy=audio_features.get("energy", 0),
-            valence=audio_features.get("valence", 0),
-            danceability=audio_features.get("danceability", 0),
-            tempo=audio_features.get("tempo", 0),
-            acousticness=audio_features.get("acousticness", 0),
-            instrumentalness=audio_features.get("instrumentalness", 0),
+            artist=artist,
+            track=track,
+            tags=", ".join(tags),
         )
-
-        logger.info("Analitzant audio features amb Ollama")
+        logger.info(f"Analitzant cançó amb Ollama: {artist} - {track}")
         result = await self.client.generate_text(prompt)
         return result.get("destinations", [])

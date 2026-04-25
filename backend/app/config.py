@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llava"
     OLLAMA_TIMEOUT: int = 300
 
-    # Spotify
-    SPOTIFY_CLIENT_ID: str = ""
-    SPOTIFY_CLIENT_SECRET: str = ""
+    # Last.fm
+    LASTFM_API_KEY: str = ""
+    LASTFM_BASE_URL: str = "https://ws.audioscrobbler.com/2.0"
 
     # Model de text
     OLLAMA_TEXT_MODEL: str = "llama3.2:1b"
