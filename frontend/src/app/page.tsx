@@ -41,7 +41,7 @@ export default function Home() {
 
   // --- CRIDA A LA API ACTUALITZADA ---
   const analyzePhotos = async () => {
-    if (files.length === 0) return;
+    /* if (files.length === 0) return;
     setIsAnalyzing(true);
     setResult(null);
     setFlightData(null);
@@ -94,7 +94,44 @@ export default function Home() {
       alert("No s'ha pogut connectar amb el servidor de recomanacions.");
     } finally {
       setIsAnalyzing(false);
-    }
+    } */
+
+      if (files.length === 0) return;
+  setIsAnalyzing(true);
+
+  // 1. Simulem un temps d'espera (per veure les animacions de càrrega)
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // 2. Definim exactament el que retornaria el teu amic
+  const mockData = {
+    destinations: [
+      {
+        city: "Cancun",
+        country: "Mexico",
+        reason: "Les teves fotos tenen una vibra tropical i de platja perfecte per al gener."
+      },
+      {
+        city: "Phuket",
+        country: "Thailand",
+        reason: "El clima càlid i les palmeres coincideixen amb la teva estètica visual."
+      }
+    ],
+    images_analyzed: files.length
+  };
+
+  // 3. Posem les dades als estats com si haguessin vingut de la API
+  setResult(mockData.destinations);
+  setFlightData({
+    num_imagenes: mockData.images_analyzed,
+    destinos: mockData.destinations.map(d => ({ pais: d.country, ciudad: d.city }))
+  });
+
+  setIsAnalyzing(false);
+  
+  // Fem scroll cap avall
+  setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
+
+
   };
 
   return (
