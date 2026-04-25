@@ -230,28 +230,6 @@ export default function Home() {
              )}
           </div>
 
-          {/* TERMINAL IA */}
-          {result && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in">
-              <div className="bg-[#1e1e1e] w-full max-w-lg rounded-xl shadow-2xl border border-white/10 overflow-hidden">
-                <div className="bg-[#333] px-4 py-2 flex gap-1.5 items-center">
-                  <div className="w-3 h-3 rounded-full bg-[#ff5f56]" /><div className="w-3 h-3 rounded-full bg-[#ffbd2e]" /><div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-                  <span className="text-[10px] text-slate-400 font-mono ml-2 uppercase">skylens-analyzer — v1.0</span>
-                </div>
-                <div className="p-6 font-mono text-sm max-h-[400px] overflow-y-auto">
-                  <p className="text-emerald-400 mb-4">~ $ get recommendations --month={month}</p>
-                  {result.map((dest, idx) => (
-                    <div key={idx} className="mb-6 border-b border-white/5 pb-4 last:border-0">
-                      <div className="text-blue-400 font-bold text-[10px] mb-1">MATCH #{idx + 1}</div>
-                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.city}, {dest.country}</h2>
-                      <p className="text-slate-400 italic text-xs mt-2 leading-relaxed">"{dest.reason}"</p>
-                    </div>
-                  ))}
-                  <button onClick={() => setResult(null)} className="mt-4 text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors">[ Close Terminal ]</button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
