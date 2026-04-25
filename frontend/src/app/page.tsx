@@ -262,13 +262,13 @@ const toggleAccordion = (index: number) => {
             {/* IMATGE (Amb fallback si no carrega) */}
             <div className="absolute inset-0 z-0">
               <img 
-                src={`https://loremflickr.com/400/600/${dest.city.replace(/\s+/g, '')},travel/all`} 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                alt={dest.city}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=400&h=600";
-                }}
-              />
+  src={`https://loremflickr.com/400/600/${dest.city.toLowerCase()},landscape,nature/all?lock=${Math.floor(Math.random() * 1000)}`} 
+  className="w-full h-full object-cover brightness-[0.85] group-hover:brightness-100 transition-all duration-700" 
+  alt={dest.city}
+  onError={(e) => {
+    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&q=80&w=400&h=600";
+  }}
+/>
               {/* Gradient fosc per llegir text */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
             </div>
