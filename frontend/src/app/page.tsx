@@ -9,27 +9,72 @@ interface DestinoIA {
   city: string;
   country: string;
   reason: string;
-  imageUrl: string; // Afegim imageUrl aquí
+  imageUrl: string;
 }
 
 export default function Home() {
+  // ESTATS FITXERS I IA
   const [files, setFiles] = useState<{ file: File; preview: string; rotation: number }[]>([]);
-  const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<DestinoIA[] | null>(null);
   const [openIndices, setOpenIndices] = useState<number[]>([]);
-  
+
+  // ESTATS TRIP DETAILS (AMB AUTOSUGGEST)
+  const [originCity, setOriginCity] = useState("Barcelona"); // El que es veu
+  const [originIata, setOriginIata] = useState("BCN");       // El que s'usa per a Skyscanner
+  const [suggestions, setSuggestions] = useState<{name: string, code: string}[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [travelDate, setTravelDate] = useState("");
+  const [adults, setAdults] = useState(1);
+  const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
+  // LÒGICA AUTOSUGGEST (Simulada per a la prova, connecta-la a la teva API si vols)
+  const handleCitySearch = async (query: string) => {
+    setOriginCity(query);
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    // Mock de suggeriments (Això ho pots canviar per una crida a /api/autosuggest)
+    const cities = [
+      { name: "Barcelona", code: "BCN" },
+      { name: "Madrid", code: "MAD" },
+      { name: "London", code: "LHR" },
+      { name: "Paris", code: "CDG" },
+      { name: "New York", code: "JFK" },
+      { name: "Tokyo", code: "NRT" },
+    ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+    
+    setSuggestions(cities);
+    setShowSuggestions(true);
+  };
+
+  const selectCity = (name: string, code: string) => {
+    setOriginCity(name);
+    setOriginIata(code);
+    setShowSuggestions(false);
+  };
+
+  const handleDateChange = (dateValue: string) => {
+    setTravelDate(dateValue);
+    if (dateValue) {
+      const selectedMonth = new Date(dateValue).getMonth() + 1;
+      setMonth(selectedMonth);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files).map(file => ({
+      const remaining = 6 - files.length;
+      const newFiles = Array.from(e.target.files).slice(0, remaining).map(file => ({
         file,
         preview: URL.createObjectURL(file),
         rotation: Math.random() * 10 - 5
       }));
-      setFiles(prev => [...prev, ...newFiles].slice(0, 6));
+      setFiles(prev => [...prev, ...newFiles]);
     }
   };
 
@@ -41,43 +86,42 @@ export default function Home() {
   };
 
   const analyzePhotos = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 || !travelDate) return;
     setIsAnalyzing(true);
     setResult(null);
     setOpenIndices([]);
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const formData = new FormData();
+    formData.append("month", month.toString());
+    files.forEach(f => formData.append("images", f.file));
 
-    // MOCK DATA AMB IMATGES FIXES PERQUÈ NO BALLIN
-    const mockData = {
-      destinations: [
-        {
-          city: "Cancún",
-          country: "Mexico",
-          reason: "Vibra tropical i platja perfecte per al gener.",
-          imageUrl: `https://loremflickr.com/400/600/cancun,landscape/all?lock=1`
-        },
-        {
-          city: "Phuket",
-          country: "Thailand",
-          reason: "Clima càlid i palmeres que coincideixen amb el teu estil.",
-          imageUrl: `https://loremflickr.com/400/600/phuket,landscape/all?lock=2`
-        }
-      ]
-    };
+    try {
+      const response = await fetch("http://localhost:8000/api/v1/recommendations", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) throw new Error("Error API");
+      const data = await response.json(); 
+      
+      const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
+        ...dest,
+        imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
+      }));
 
-    setResult(mockData.destinations);
-    setIsAnalyzing(false);
-    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
+      setResult(destinosConImagen);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
+    } catch (error) {
+      alert("Error connectant amb la IA.");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const scrollToFlight = (index: number) => {
-    if (!openIndices.includes(index)) {
-      setOpenIndices([...openIndices, index]);
-    }
+    if (!openIndices.includes(index)) setOpenIndices([...openIndices, index]);
     setTimeout(() => {
-      const element = document.getElementById(`flights-${index}`);
-      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(`flights-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
@@ -97,69 +141,116 @@ export default function Home() {
           <div className="bg-[#0072ce] p-2.5 rounded-xl shadow-lg transform rotate-[-10deg] group-hover:rotate-[360deg] transition-all duration-700">
             <Plane className="text-white w-6 h-6" />
           </div>
-          <span className="text-2xl font-black tracking-tighter text-slate-900 uppercase">SkyLens</span>
+          <div>
+            <span className="text-2xl font-black tracking-tighter text-slate-900 block leading-none uppercase">SkyLens</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0072ce]">by Skyscanner vibe</span>
+          </div>
         </div>
       </nav>
 
       {/* GRID PRINCIPAL */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-10">
+        
+        {/* ESQUERRA: TRIP DETAILS */}
         <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
-          <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce]">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Boarding Date</h3>
-            <select value={month} onChange={(e) => setMonth(parseInt(e.target.value))} className="w-full bg-slate-50 border-2 border-slate-100 rounded-lg p-3 font-bold">
-              {[...Array(12)].map((_, i) => (
-                <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('ca', { month: 'long' }).toUpperCase()}</option>
-              ))}
-            </select>
+          <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Trip Details</h3>
+            
+            {/* ORIGEN AMB AUTOSUGGEST */}
+            <div className="space-y-1 relative">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
+                <input 
+                  type="text" 
+                  value={originCity}
+                  onChange={(e) => handleCitySearch(e.target.value)}
+                  placeholder="Enter city..."
+                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce] transition-all"
+                />
+              </div>
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden animate-in fade-in">
+                  {suggestions.map((s, i) => (
+                    <button key={i} onClick={() => selectCity(s.name, s.code)} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 flex justify-between">
+                      <span>{s.name}</span>
+                      <span className="text-[10px] text-slate-300 font-mono">{s.code}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* DATA */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Departure Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
+                <input type="date" value={travelDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => handleDateChange(e.target.value)} className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]" />
+              </div>
+            </div>
+
+            {/* PASSATGERS */}
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Travelers</label>
+              <select value={adults} onChange={(e) => setAdults(Number(e.target.value))} className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]">
+                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Adult' : 'Adults'}</option>)}
+              </select>
+            </div>
           </div>
 
-          <div onClick={() => fileInputRef.current?.click()} className="group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 transform hover:scale-[1.01] transition-transform">
-            <Folder className="text-yellow-600 mb-4" size={32} />
-            <h3 className="text-lg font-bold text-yellow-900 leading-tight">Click to add your vibe photos.</h3>
+          {/* ADD PHOTOS */}
+          <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
+            <Folder className="text-yellow-600 mb-2" size={32} />
+            <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add visual vibe photos</h3>
+            <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
             <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
           </div>
 
-          <button disabled={isAnalyzing || files.length === 0} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl hover:bg-[#0072ce] transition-all">
-            {isAnalyzing ? <Loader2 className="animate-spin" /> : "ANALYZE MOOD"}
+          <button disabled={isAnalyzing || files.length === 0 || !travelDate} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+            {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
           </button>
         </div>
 
-        <div className="lg:col-span-8 order-1 lg:order-2 min-h-[450px] relative">
-          {files.length === 0 ? (
-            <div className="h-full border-4 border-dashed border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-slate-300 italic">
-               Waiting for inspiration...
-            </div>
-          ) : (
-            <div className="relative w-full h-full min-h-[450px]">
-              {files.map((f, i) => (
-                <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
-                  <img src={f.preview} className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
-                  <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100"><X size={12} /></button>
+        {/* DRETA: MOODBOARD */}
+        <div className="lg:col-span-8 order-1 lg:order-2 min-h-[500px] relative">
+          <div className={`h-full border-4 border-dashed border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-slate-300 ${files.length > 0 ? 'border-none' : ''}`}>
+             {files.length === 0 ? (
+               <><Camera size={48} className="mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-center">Your canvas is waiting</p></>
+             ) : (
+                <div className="relative w-full h-full min-h-[500px]">
+                  {files.map((f, i) => (
+                    <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
+                      <img src={f.preview} alt="mood" className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
+                      <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                    </div>
+                  ))}
+                  <div className="absolute bottom-0 right-0 opacity-10 hidden md:block"><Coffee size={100} /></div>
                 </div>
-              ))}
-            </div>
-          )}
+             )}
+          </div>
+
         </div>
       </div>
 
-      {/* POSTALS (FILA HORITZONTAL CENTRADA) */}
+      {/* POSTALS (CORREGIT) */}
       {result && (
         <div ref={resultsRef} className="max-w-6xl mx-auto px-4 py-16 animate-in fade-in zoom-in">
+          <div className="text-center mb-8"><span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">Els teus matches visuals:</span></div>
           <div className="flex flex-row gap-8 overflow-x-auto pb-10 justify-center">
             {result.map((dest, idx) => (
-              <div key={idx} className="relative min-w-[260px] w-[260px] h-[380px] group">
+              <div key={idx} className="relative min-w-[240px] w-[240px] h-[360px] group">
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-8 bg-white/60 shadow-sm rotate-1 z-10" />
                 <div className="relative h-full w-full bg-white border-[6px] border-white shadow-xl rounded-2xl overflow-hidden transition-all group-hover:-translate-y-4">
                   <div className="absolute inset-0 z-0">
-                    <img src={dest.imageUrl} className="w-full h-full object-cover brightness-[0.85] group-hover:brightness-100 transition-all duration-700" />
+                    <img src={dest.imageUrl} alt={dest.city} className="w-full h-full object-cover brightness-[0.85] group-hover:brightness-100 transition-all duration-700" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent" />
                   </div>
-                  <div className="absolute inset-0 z-10 p-6 flex flex-col justify-end text-white">
+                  <div className="absolute inset-0 z-10 p-6 flex flex-col justify-end text-white text-left">
                     <span className="text-[10px] font-black uppercase text-white/60">{dest.country}</span>
-                    <h3 className="text-3xl font-black uppercase">{dest.city}</h3>
+                    <h3 className="text-2xl font-black uppercase leading-tight">{dest.city}</h3>
                     <div className="max-h-0 group-hover:max-h-40 overflow-hidden transition-all duration-500">
-                      <p className="text-[10px] mt-3 italic line-clamp-4">"{dest.reason}"</p>
-                      <button onClick={() => scrollToFlight(idx)} className="mt-4 w-full py-2 bg-[#0072ce] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#0072ce] transition-colors">Check Flights</button>
+                      <button onClick={() => scrollToFlight(idx)} className="mt-4 w-full py-2 bg-[#0072ce] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#0072ce] transition-colors shadow-lg">Check Flights</button>
                     </div>
                   </div>
                 </div>
@@ -170,15 +261,15 @@ export default function Home() {
       )}
 
       {/* ACORDIONS DE VOLS */}
-      <div className="max-w-4xl mx-auto pt-16 border-t border-slate-200 space-y-4">
+      <div className="max-w-4xl mx-auto pt-16 border-t border-slate-200 space-y-4 pb-32">
         {result && result.map((dest, idx) => {
           const isExpanded = openIndices.includes(idx);
           return (
             <div key={idx} id={`flights-${idx}`} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4 transition-all">
               <button onClick={() => toggleAccordion(idx)} className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 text-left">
                   <Ticket className="text-[#0072ce] w-5 h-5" />
-                  <div className="text-left">
+                  <div>
                     <h3 className="font-black text-slate-900 uppercase">Vols a {dest.city}</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">{dest.country}</p>
                   </div>
@@ -187,9 +278,16 @@ export default function Home() {
               </button>
               {isExpanded && (
                 <div className="p-6 pt-0 animate-in slide-in-from-top-2">
-                  <FlightResults 
-                    data={{ num_imagenes: files.length, destinos: [{ pais: dest.country, ciudad: dest.city }] }} 
-                  />
+                  <FlightResults data={{ 
+                    num_imagenes: files.length, 
+                    destinos: [{ 
+                      pais: dest.country, 
+                      ciudad: dest.city,
+                      origin: originIata, // Enviem el codi BCN, no el nom
+                      date: travelDate,
+                      adults: adults
+                    }] 
+                  }} />
                 </div>
               )}
             </div>
