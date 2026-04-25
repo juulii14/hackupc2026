@@ -16,7 +16,7 @@ class Settings(BaseSettings):
 
     # Imatges
     MAX_IMAGE_SIZE_MB: int = 10
-    ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png"]
+    ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/jpg"]
     MAX_IMAGES_PER_REQUEST: int = 5
 
     # Recomanacions

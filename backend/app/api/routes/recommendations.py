@@ -1,7 +1,5 @@
-# app/api/routes/recommendations.py
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
 from typing import List
-from app.models.request_models import RecommendationRequest
 from app.models.response_models import RecommendationResponse
 from app.services.destination_service import DestinationService
 from app.api.deps import get_destination_service
@@ -10,11 +8,10 @@ from app.config import settings
 
 router = APIRouter()
 
-
 @router.post("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
+    month: int = Form(..., ge=1, le=12),
     images: List[UploadFile] = File(...),
-    request: RecommendationRequest = Depends(),
     service: DestinationService = Depends(get_destination_service),
 ):
     if len(images) > settings.MAX_IMAGES_PER_REQUEST:
@@ -33,4 +30,4 @@ async def get_recommendations(
             "content_type": image.content_type,
         })
 
-    return await service.get_recommendations(image_data_list, request.month)
+    return await service.get_recommendations(image_data_list, month)
