@@ -92,4 +92,4 @@ export const skyscannerService = {
     // 2. Llamamos a la función directamente
     return parseFlightResults(data);
   }
-};
+}; 
