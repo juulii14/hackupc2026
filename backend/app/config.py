@@ -14,6 +14,12 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llava"
     OLLAMA_TIMEOUT: int = 300
 
+    # Spotify
+    SPOTIFY_CLIENT_ID: str = ""
+    SPOTIFY_CLIENT_SECRET: str = ""
+
+    # Model de text
+    OLLAMA_TEXT_MODEL: str = "llama3.2:1b"
     # Imatges
     MAX_IMAGE_SIZE_MB: int = 10
     ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/jpg"]

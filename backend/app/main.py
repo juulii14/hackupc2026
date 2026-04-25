@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import recommendations
 from app.config import settings
+from app.api.routes import recommendations, song_recommendations
+
 
 app = FastAPI(
     title="Travel Destination Recommender",
@@ -23,6 +25,11 @@ app.include_router(
     tags=["recommendations"],
 )
 
+app.include_router(
+    song_recommendations.router,
+    prefix="/api/v1",
+    tags=["song-recommendations"],
+)
 
 @app.get("/health")
 async def health_check():

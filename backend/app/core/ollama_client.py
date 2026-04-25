@@ -37,7 +37,35 @@ class OllamaClient:
         except json.JSONDecodeError as e:
             logger.error(f"Ollama no ha retornat JSON vàlid: {raw_text[:200]}")
             raise ValueError(f"Resposta invàlida d'Ollama: {e}") from e
-        
+    
+
+    async def generate_text(self, prompt: str) -> dict:
+        payload = {
+            "model": settings.OLLAMA_TEXT_MODEL,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            "stream": False,
+            "format": "json",
+        }
+
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            logger.info(f"Enviant text a Ollama amb model '{settings.OLLAMA_TEXT_MODEL}'")
+            response = await client.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+
+        raw_text = response.json().get("message", {}).get("content", "{}")
+
+        try:
+            return json.loads(raw_text)
+        except json.JSONDecodeError as e:
+            logger.error(f"Ollama no ha retornat JSON vàlid: {raw_text[:200]}")
+            raise ValueError(f"Resposta invàlida d'Ollama: {e}") from e 
 
 
-#-------------------------------------- MIRAR --------------------------------------
