@@ -17,6 +17,7 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<DestinoIA[] | null>(null);
   const [flightData, setFlightData] = useState<RecepcionInfo | null>(null);
+  const [openIndices, setOpenIndices] = useState<number[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -134,6 +135,27 @@ export default function Home() {
 
   };
 
+const scrollToFlight = (index: number) => {
+  if (!openIndices.includes(index)) {
+    setOpenIndices([...openIndices, index]); // Afegim el nou índex a la llista
+  }
+  
+  setTimeout(() => {
+    const element = document.getElementById(`flights-${index}`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+};
+
+const toggleAccordion = (index: number) => {
+  if (openIndices.includes(index)) {
+    // Si ja hi és, el treiem (tanquem)
+    setOpenIndices(openIndices.filter(i => i !== index));
+  } else {
+    // Si no hi és, l'afegim (obrim)
+    setOpenIndices([...openIndices, index]);
+  }
+};
+
   return (
     <main className="min-h-screen graph-paper p-4 md:p-8 selection:bg-[#0072ce]/20">
       
@@ -212,54 +234,118 @@ export default function Home() {
               </div>
             </div>
           )}
+        </div>
+        
+      </div>
 
-          {/* TERMINAL DE RESULTATS MULTI-DESTINACIÓ */}
-          {result && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center p-4 animate-in zoom-in">
-              <div className="bg-[#1e1e1e] w-full max-w-lg rounded-xl shadow-[0_30px_60px_rgba(0,0,0,0.5)] overflow-hidden border border-white/10">
-                <div className="bg-[#333] px-4 py-2 flex gap-1.5 items-center">
-                  <div className="w-3 h-3 rounded-full bg-[#ff5f56]" /><div className="w-3 h-3 rounded-full bg-[#ffbd2e]" /><div className="w-3 h-3 rounded-full bg-[#27c93f]" />
-                  <span className="text-[10px] text-slate-400 font-mono ml-2 uppercase tracking-widest">skylens-analyzer — v1.0</span>
-                </div>
-                <div className="p-6 font-mono text-sm max-h-[420px] overflow-y-auto">
-                  <p className="text-emerald-400 mb-4">~ $ get recommendations --month={month}</p>
-                  
-                  {result.map((dest, idx) => (
-                    <div key={idx} className="mb-6 border-b border-white/5 pb-4 last:border-0">
-                      <div className="text-blue-400 font-bold text-[10px] mb-1">MATCH #{idx + 1}</div>
-                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.city}, {dest.country}</h2>
-                      <p className="text-slate-400 italic text-xs mt-2 leading-relaxed">
-                         "{dest.reason}"
-                      </p>
-                    </div>
-                  ))}
+                {/* SECCIÓ DE RESULTATS: FILA HORITZONTAL DE POSTALS */}
+{result && (
+  <div className="mt-16 max-w-6xl mx-auto px-4 animate-in fade-in zoom-in duration-700">
+    
+    <div className="text-center mb-8">
+       <span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">Els teus "matches" visuals:</span>
+    </div>
 
-                  <button onClick={() => setResult(null)} className="mt-4 text-[10px] uppercase font-bold text-slate-500 hover:text-white transition-colors">
-                    [ Close results ]
-                  </button>
-                </div>
+    {/* Contenidor de la fila horitzontal */}
+    <div className="flex flex-row gap-6 overflow-x-auto pb-8 pt-4 custom-scrollbar snap-x justify-center">
+      {result.map((dest, idx) => (
+        <div 
+          key={idx} 
+          className="relative min-w-[280px] w-[280px] h-[400px] snap-center group"
+        >
+          {/* Cinta adhesiva decorativa */}
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-8 bg-white/60 backdrop-blur-sm z-30 shadow-sm rotate-1" />
+
+          {/* Targeta estil Foxico-Mini */}
+          <div className="relative h-full w-full bg-white border-[6px] border-white shadow-xl rounded-2xl overflow-hidden transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-1">
+            
+            {/* IMATGE (Amb fallback si no carrega) */}
+            <div className="absolute inset-0 z-0">
+              <img 
+                src={`https://loremflickr.com/400/600/${dest.city.replace(/\s+/g, '')},travel/all`} 
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                alt={dest.city}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&q=80&w=400&h=600";
+                }}
+              />
+              {/* Gradient fosc per llegir text */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+            </div>
+
+            {/* CONTINGUT */}
+            <div className="absolute inset-0 z-10 p-6 flex flex-col justify-end text-white">
+              <div className="mb-1">
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">{dest.country}</span>
+                <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">{dest.city}</h3>
+              </div>
+              
+              <div className="h-0 group-hover:h-auto overflow-hidden transition-all duration-500">
+                <p className="text-[10px] leading-tight text-white/80 mt-2 italic line-clamp-3">
+                  "{dest.reason}"
+                </p>
+                <button 
+      onClick={() => scrollToFlight(idx)} // <--- AQUESTA LÍNIA ÉS LA CLAU
+      className="mt-4 w-full py-2 bg-[#0072ce] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#0072ce] transition-colors"
+    >
+      Check Flights
+    </button>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* RESULTATS DE VOLS (INTEGRACIÓ SKyscanner) */}
-      <div ref={resultsRef} className="max-w-7xl mx-auto pt-16 border-t border-slate-200">
-        {flightData ? (
-          <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <h2 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-3">
-              <Ticket className="text-[#0072ce]" /> Available Flights from Skyscanner
-            </h2>
-            <FlightResults data={flightData} />
+            {/* Icona de l'avió petita */}
+            <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-md p-2 rounded-full border border-white/30">
+               <Plane className="w-3 h-3 text-white" />
+            </div>
           </div>
-        ) : isAnalyzing && (
-          <div className="py-20 text-center space-y-4">
-            <Loader2 className="w-10 h-10 animate-spin mx-auto text-[#0072ce]" />
-            <p className="font-black text-slate-400 uppercase tracking-widest text-xs animate-pulse">Consulting global travel database...</p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+{/* 3. FLIGHT RESULTS (Agrupats i col·lapsables) */}
+<div className="max-w-4xl mx-auto pt-16 border-t border-slate-200 space-y-4">
+{result && result.map((dest, idx) => {
+  const isExpanded = openIndices.includes(idx); // Comprovem si aquest està obert
+
+  return (
+    <div key={idx} id={`flights-${idx}`} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-4">
+      
+      {/* CAPÇALERA */}
+      <button 
+        onClick={() => toggleAccordion(idx)} // Fem servir la nova funció de toggle
+        className="w-full flex items-center justify-between p-6 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-50 p-2 rounded-lg">
+            <Ticket className="text-[#0072ce] w-5 h-5" />
           </div>
-        )}
-      </div>
+          <div className="text-left">
+            <h3 className="font-black text-slate-900 uppercase tracking-tight">Vols a {dest.city}</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase">{dest.country}</p>
+          </div>
+        </div>
+        <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </button>
+
+      {/* CONTINGUT */}
+      {isExpanded && (
+        <div className="p-6 pt-0 animate-in slide-in-from-top-2 duration-300">
+          <FlightResults 
+            data={{
+              num_imagenes: files.length,
+              destinos: [{ pais: dest.country, ciudad: dest.city }] 
+            }} 
+          />
+        </div>
+      )}
+    </div>
+  );
+})}
+</div>
     </main>
   );
 }

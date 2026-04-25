@@ -33,3 +33,21 @@ body {
 .handwritten {
   font-family: 'Comic Sans MS', 'cursive'; /* O una de Google Fonts com 'Permanent Marker' */
 }
+
+/* Amaga la scrollbar però permet fer scroll */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 114, 206, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 114, 206, 0.4);
+}
