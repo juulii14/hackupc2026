@@ -6,9 +6,9 @@ import { RecepcionInfo } from '@/types/flight';
 
 // Adaptem el tipus segons el que ens retorna el nou endpoint
 interface DestinoIA {
-  ciudad: string;
-  pais: string;
-  rao: string;
+  city: string;
+  country: string;
+  reason: string;
 }
 
 export default function Home() {
@@ -68,8 +68,8 @@ export default function Home() {
       
       // Suposem que el backend retorna { "recommendations": [...] } o directament l'array
       // Si la clau és diferent, canvia 'data.recommendations' per la que toqui
-      const destinosRecibidos = data.destination;
-      const images = data.images.analyzed;
+      const destinosRecibidos = data.destinations;
+      const images = data.images_analyzed;
 
       setResult(destinosRecibidos);
 
@@ -77,8 +77,8 @@ export default function Home() {
       const infoParaVuelos: RecepcionInfo = {
         num_imagenes: files.length,
         destinos: destinosRecibidos.map((d: DestinoIA) => ({
-          pais: d.pais,
-          ciudad: d.ciudad
+          pais: d.country,
+          ciudad: d.city
         }))
       };
 
@@ -190,9 +190,9 @@ export default function Home() {
                   {result.map((dest, idx) => (
                     <div key={idx} className="mb-6 border-b border-white/5 pb-4 last:border-0">
                       <div className="text-blue-400 font-bold text-[10px] mb-1">MATCH #{idx + 1}</div>
-                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.ciudad}, {dest.pais}</h2>
+                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.city}, {dest.pais}</h2>
                       <p className="text-slate-400 italic text-xs mt-2 leading-relaxed">
-                         "{dest.rao}"
+                         "{dest.reason}"
                       </p>
                     </div>
                   ))}
