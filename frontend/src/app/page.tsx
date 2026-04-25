@@ -1,6 +1,9 @@
+import Image from "next/image";
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Ticket, Coffee } from "lucide-react";
+import FlightResults from '@/components/FlightResults';
+import { RecepcionInfo } from '@/types/flight';
 
 export default function Home() {
   const [files, setFiles] = useState<{ file: File; preview: string; rotation: number }[]>([]);
@@ -204,6 +207,23 @@ export default function Home() {
           )}
         </div>
       </div>
+    </main>
+  );
+}
+export default function HomePage() {
+  // Simulación de la info JSON que recibes
+  const infoRecibida: RecepcionInfo = {
+    num_imagenes: 3,
+    destinos: [
+      { pais: "Francia", ciudad: "Paris" },
+      { pais: "Japón", ciudad: "Tokyo" }
+    ]
+  };
+
+  return (
+    <main className="container mx-auto py-10">
+      <h1 className="text-3xl font-bold mb-8 text-center">Planificador de Viajes</h1>
+      <FlightResults data={infoRecibida} />
     </main>
   );
 }
