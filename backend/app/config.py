@@ -12,8 +12,14 @@ class Settings(BaseSettings):
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llava"
-    OLLAMA_TIMEOUT: int = 120
+    OLLAMA_TIMEOUT: int = 300
 
+    # Last.fm
+    LASTFM_API_KEY: str = ""
+    LASTFM_BASE_URL: str = "https://ws.audioscrobbler.com/2.0"
+
+    # Model de text
+    OLLAMA_TEXT_MODEL: str = "llama3.2:1b"
     # Imatges
     MAX_IMAGE_SIZE_MB: int = 10
     ALLOWED_IMAGE_TYPES: List[str] = ["image/jpeg", "image/png", "image/jpg"]
