@@ -190,7 +190,7 @@ export default function Home() {
                   {result.map((dest, idx) => (
                     <div key={idx} className="mb-6 border-b border-white/5 pb-4 last:border-0">
                       <div className="text-blue-400 font-bold text-[10px] mb-1">MATCH #{idx + 1}</div>
-                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.city}, {dest.pais}</h2>
+                      <h2 className="text-2xl font-black text-white tracking-tighter uppercase">{dest.city}, {dest.country}</h2>
                       <p className="text-slate-400 italic text-xs mt-2 leading-relaxed">
                          "{dest.reason}"
                       </p>
