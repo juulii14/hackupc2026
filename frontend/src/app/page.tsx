@@ -28,6 +28,12 @@ export default function Home() {
   const [adults, setAdults] = useState(1);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
 
+  // ESTATS MUSICA
+  const [activeTab, setActiveTab] = useState<"photos" | "music">("photos");
+  const [artist, setArtist] = useState("");
+  const [track, setTrack] = useState("");
+  const [isAnalyzingMusic, setIsAnalyzingMusic] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +124,36 @@ export default function Home() {
     }
   };
 
+  const analyzeMusic = async () => {
+    if (!artist || !track || !travelDate) return;
+    setIsAnalyzingMusic(true);
+    setResult(null);
+    setOpenIndices([]);
+
+    try {
+      const response = await fetch("http://localhost:8000/api/v1/recommendations/song", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artist, track }),
+      });
+
+      if (!response.ok) throw new Error("Error API");
+      const data = await response.json();
+
+      const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
+        ...dest,
+        imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
+      }));
+
+      setResult(destinosConImagen);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
+    } catch (error) {
+      alert("Error connectant amb la IA.");
+    } finally {
+      setIsAnalyzingMusic(false);
+    }
+  };
+
   const scrollToFlight = (index: number) => {
     if (!openIndices.includes(index)) setOpenIndices([...openIndices, index]);
     setTimeout(() => {
@@ -199,17 +235,64 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ADD PHOTOS */}
-          <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
-            <Folder className="text-yellow-600 mb-2" size={32} />
-            <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add visual vibe photos</h3>
-            <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
-            <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+          {/* PESTANYES */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab("photos")}
+              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all ${activeTab === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
+            >
+              📷 Photos
+            </button>
+            <button
+              onClick={() => setActiveTab("music")}
+              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all ${activeTab === "music" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
+            >
+              🎵 Music
+            </button>
           </div>
 
-          <button disabled={isAnalyzing || files.length === 0 || !travelDate} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
-            {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
-          </button>
+          {activeTab === "photos" ? (
+            <>
+              <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
+                <Folder className="text-yellow-600 mb-2" size={32} />
+                <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add visual vibe photos</h3>
+                <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
+                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+              </div>
+              <button disabled={isAnalyzing || files.length === 0 || !travelDate} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+                {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="bg-white p-6 shadow-xl border-t-4 border-purple-500 space-y-4">
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Song Details</h3>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Artist</label>
+                  <input
+                    type="text"
+                    value={artist}
+                    onChange={(e) => setArtist(e.target.value)}
+                    placeholder="Ex: Bad Bunny"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Track</label>
+                  <input
+                    type="text"
+                    value={track}
+                    onChange={(e) => setTrack(e.target.value)}
+                    placeholder="Ex: Tití Me Preguntó"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all"
+                  />
+                </div>
+              </div>
+              <button disabled={isAnalyzingMusic || !artist || !track || !travelDate} onClick={analyzeMusic} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-purple-600 transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+                {isAnalyzingMusic ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE VIBE</>}
+              </button>
+            </>
+          )}
         </div>
 
         {/* DRETA: MOODBOARD */}
