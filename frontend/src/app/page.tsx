@@ -1,9 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Coffee, Ticket } from "lucide-react";
-// L'ERROR ESTAVA AQUÍ: Treiem les claus { }
 import FlightResults from '@/components/FlightResults';
-import { RecepcionInfo } from '@/types/flight';
 
 interface DestinoIA {
   city: string;
@@ -19,11 +17,9 @@ export default function Home() {
   const [result, setResult] = useState<DestinoIA[] | null>(null);
   const [openIndices, setOpenIndices] = useState<number[]>([]);
 
-  // ESTATS TRIP DETAILS (AMB AUTOSUGGEST)
-  const [originCity, setOriginCity] = useState("Barcelona"); // El que es veu
-  const [originIata, setOriginIata] = useState("BCN");       // El que s'usa per a Skyscanner
-  const [suggestions, setSuggestions] = useState<{name: string, code: string}[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  // ESTATS TRIP DETAILS (ORIGEN FIXAT A BARCELONA PER DEFECTE)
+  const [originCity, setOriginCity] = useState("Barcelona"); 
+  const [originIata, setOriginIata] = useState("BCN");       
   const [travelDate, setTravelDate] = useState("");
   const [adults, setAdults] = useState(1);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
@@ -31,33 +27,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // LÒGICA AUTOSUGGEST (Simulada per a la prova, connecta-la a la teva API si vols)
-  const handleCitySearch = async (query: string) => {
-    setOriginCity(query);
-    if (query.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    // Mock de suggeriments (Això ho pots canviar per una crida a /api/autosuggest)
-    const cities = [
-      { name: "Barcelona", code: "BCN" },
-      { name: "Madrid", code: "MAD" },
-      { name: "London", code: "LHR" },
-      { name: "Paris", code: "CDG" },
-      { name: "New York", code: "JFK" },
-      { name: "Tokyo", code: "NRT" },
-    ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
-    
-    setSuggestions(cities);
-    setShowSuggestions(true);
-  };
-
-  const selectCity = (name: string, code: string) => {
-    setOriginCity(name);
-    setOriginIata(code);
-    setShowSuggestions(false);
-  };
-
+  // GESTIÓ DEL CANVI DE DATA
   const handleDateChange = (dateValue: string) => {
     setTravelDate(dateValue);
     if (dateValue) {
@@ -66,6 +36,7 @@ export default function Home() {
     }
   };
 
+  // GESTIÓ DE FOTOS
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const remaining = 6 - files.length;
@@ -85,6 +56,7 @@ export default function Home() {
     });
   };
 
+  // CRIDA AL BACKEND PER ANALITZAR MOOD (REBREM CIUTAT I PAÍS)
   const analyzePhotos = async () => {
     if (files.length === 0 || !travelDate) return;
     setIsAnalyzing(true);
@@ -104,6 +76,7 @@ export default function Home() {
       if (!response.ok) throw new Error("Error API");
       const data = await response.json(); 
       
+      // Mapegem els destins que ens dóna el backend
       const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
         ...dest,
         imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
@@ -112,7 +85,7 @@ export default function Home() {
       setResult(destinosConImagen);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
     } catch (error) {
-      alert("Error connectant amb la IA.");
+      alert("Error connectant amb la IA del backend.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -148,58 +121,55 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* GRID PRINCIPAL */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-10">
         
-        {/* ESQUERRA: TRIP DETAILS */}
+        {/* COLUMNA ESQUERRA: TRIP DETAILS */}
         <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
           <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Trip Details</h3>
             
-            {/* ORIGEN AMB AUTOSUGGEST */}
-            <div className="space-y-1 relative">
+            {/* ORIGEN (BARCELONA PER DEFECTE) */}
+            <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
                 <input 
                   type="text" 
                   value={originCity}
-                  onChange={(e) => handleCitySearch(e.target.value)}
-                  placeholder="Enter city..."
-                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce] transition-all"
+                  readOnly
+                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-400 outline-none cursor-default"
                 />
               </div>
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden animate-in fade-in">
-                  {suggestions.map((s, i) => (
-                    <button key={i} onClick={() => selectCity(s.name, s.code)} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 flex justify-between">
-                      <span>{s.name}</span>
-                      <span className="text-[10px] text-slate-300 font-mono">{s.code}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* DATA */}
+            {/* DATA DE SORTIDA */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Departure Date</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
-                <input type="date" value={travelDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => handleDateChange(e.target.value)} className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]" />
+                <input 
+                  type="date" 
+                  value={travelDate} 
+                  min={new Date().toISOString().split('T')[0]} 
+                  onChange={(e) => handleDateChange(e.target.value)} 
+                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]" 
+                />
               </div>
             </div>
 
             {/* PASSATGERS */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Travelers</label>
-              <select value={adults} onChange={(e) => setAdults(Number(e.target.value))} className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]">
+              <select 
+                value={adults} 
+                onChange={(e) => setAdults(Number(e.target.value))} 
+                className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]"
+              >
                 {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Adult' : 'Adults'}</option>)}
               </select>
             </div>
           </div>
 
-          {/* ADD PHOTOS */}
           <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
             <Folder className="text-yellow-600 mb-2" size={32} />
             <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add visual vibe photos</h3>
@@ -207,12 +177,16 @@ export default function Home() {
             <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
           </div>
 
-          <button disabled={isAnalyzing || files.length === 0 || !travelDate} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+          <button 
+            disabled={isAnalyzing || files.length === 0 || !travelDate} 
+            onClick={analyzePhotos} 
+            className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30"
+          >
             {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
           </button>
         </div>
 
-        {/* DRETA: MOODBOARD */}
+        {/* COLUMNA DRETA: MOODBOARD */}
         <div className="lg:col-span-8 order-1 lg:order-2 min-h-[500px] relative">
           <div className={`h-full border-4 border-dashed border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-slate-300 ${files.length > 0 ? 'border-none' : ''}`}>
              {files.length === 0 ? (
@@ -229,11 +203,10 @@ export default function Home() {
                 </div>
              )}
           </div>
-
         </div>
       </div>
 
-      {/* POSTALS (CORREGIT) */}
+      {/* POSTALS DE DESTINS (PROVINENTS DEL BACKEND) */}
       {result && (
         <div ref={resultsRef} className="max-w-6xl mx-auto px-4 py-16 animate-in fade-in zoom-in">
           <div className="text-center mb-8"><span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">Els teus matches visuals:</span></div>
@@ -260,7 +233,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ACORDIONS DE VOLS */}
+      {/* ACORDIONS DE VOLS AMB DADES REALS DEL FORMULARI */}
       <div className="max-w-4xl mx-auto pt-16 border-t border-slate-200 space-y-4 pb-32">
         {result && result.map((dest, idx) => {
           const isExpanded = openIndices.includes(idx);
@@ -278,16 +251,13 @@ export default function Home() {
               </button>
               {isExpanded && (
                 <div className="p-6 pt-0 animate-in slide-in-from-top-2">
-                  <FlightResults data={{ 
-                    num_imagenes: files.length, 
-                    destinos: [{ 
-                      pais: dest.country, 
-                      ciudad: dest.city,
-                      origin: originIata, // Enviem el codi BCN, no el nom
-                      date: travelDate,
-                      adults: adults
-                    }] 
-                  }} />
+                  {/* Enviem originIata (BCN), la ciutat del backend, i els adults/data del form */}
+                  <FlightResults 
+                    originCode={originIata} 
+                    destinationCity={dest.city} 
+                    adults={adults} 
+                    date={travelDate} 
+                  />
                 </div>
               )}
             </div>

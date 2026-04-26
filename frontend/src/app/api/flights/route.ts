@@ -6,36 +6,29 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    let { cityCode, adults, date } = body;
+    let { cityCode, adults, date, originCode } = body;
 
-    // 1. Lógica de Destinos (Barcelona BCN como Origen)
-    let iata = cityCode;
-    
-    // Si no viene ciudad o hay error, buscamos Cancún (CUN) o Phuket (HKT)
+    // 1. Lógica de Destino (IATA)
+    let destinationIata = cityCode;
     if (!cityCode || cityCode.length > 3) {
       const detected = await skyscannerService.getIataCode(cityCode);
-      
-      if (!detected) {
-        // Si no detecta la ciudad, elegimos Cancún como fallback
-        iata = 'CUN'; 
-        console.log("⚠️ No se detectó IATA, usando Cancún (CUN) por defecto");
-      } else {
-        iata = detected;
-      }
+      destinationIata = detected || 'CUN'; // Fallback a Cancún si no se encuentra
     }
 
-    // Seguridad: Si intentamos buscar BCN a BCN, lo cambiamos a Phuket
-    if (iata.toUpperCase() === 'BCN') {
-      iata = 'HKT';
-      console.log("🔄 Destino era Barcelona, cambiado a Phuket (HKT) para evitar conflicto");
+    // 2. Lógica de Origen
+    const finalOrigin = originCode || 'BCN';
+
+    // Evitar que origen y destino sean iguales
+    if (finalOrigin.toUpperCase() === destinationIata.toUpperCase()) {
+      destinationIata = (finalOrigin === 'BCN') ? 'MAD' : 'BCN';
     }
 
-    console.log(`✈️ Buscando: BCN a ${iata} para el ${date}`);
+    console.log(`✈️ Buscando: ${finalOrigin} a ${destinationIata} para el ${date} con ${adults} adultos`);
 
-    // 2. Crear sesión (Origen fijado en BCN)
+    // 3. Crear sesión con datos dinámicos
     const sessionData = await skyscannerService.createFlightSearch({
-      originCode: 'BCN', 
-      destCode: iata,
+      originCode: finalOrigin, 
+      destCode: destinationIata,
       adults: adults || 1,
       date: date
     });
@@ -46,15 +39,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No session token", details: sessionData }, { status: 500 });
     }
 
-    // 3. ESPERA DE SEGURIDAD
+    // 4. ESPERA Y OBTENCIÓN DE RESULTADOS
     await sleep(2000);
-
-    // 4. Obtener resultados
     let flights = await skyscannerService.getSearchUpdate(sessionToken);
 
-    // 5. Re-intento si sale vacío
     if (flights.length === 0) {
-      await sleep(1500);
+      await sleep(2000);
       flights = await skyscannerService.getSearchUpdate(sessionToken);
     }
 

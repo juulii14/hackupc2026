@@ -3,19 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { Plane, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
 import { FlightResultData } from '@/types/flight';
 
+// Definimos los props que el componente DEBE recibir
 interface FlightResultsProps {
-  data: {
-    destinos: Array<{ pais: string; ciudad: string }>;
-    num_imagenes: number;
-  };
+  originCode: string;
+  destinationCity: string;
+  adults: number;
+  date: string;
 }
 
-export default function FlightResults({ data }: FlightResultsProps) {
+export default function FlightResults({ originCode, destinationCity, adults, date }: FlightResultsProps) {
   const [flights, setFlights] = useState<FlightResultData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para convertir minutos a formato "Xh Ymin"
   const formatDuration = (totalMinutes: number) => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -24,25 +24,21 @@ export default function FlightResults({ data }: FlightResultsProps) {
 
   useEffect(() => {
     const fetchFlights = async () => {
-      if (!data?.destinos || data.destinos.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+      // Si no tenemos fecha o destino, no disparamos la búsqueda
+      if (!destinationCity || !date) return;
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const destination = data.destinos[0].ciudad;
-        const travelDate = "2026-09-15"; 
-
         const response = await fetch('/api/flights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            cityCode: destination,
-            adults: 1,
-            date: travelDate
+            cityCode: destinationCity,
+            originCode: originCode,
+            adults: adults,
+            date: date
           }),
         });
 
@@ -67,7 +63,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
     };
 
     fetchFlights();
-  }, [data]);
+  }, [destinationCity, originCode, adults, date]);
 
   if (isLoading) {
     return (
@@ -90,7 +86,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
   if (!Array.isArray(flights) || flights.length === 0) {
     return (
       <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-        <p className="text-slate-500 italic">No flights were found for this destination.</p>
+        <p className="text-slate-500 italic">No flights found for {destinationCity} on {date}.</p>
       </div>
     );
   }
@@ -100,7 +96,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
       {flights.map((flight) => (
         <div key={flight.id} className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center justify-between gap-6">
           
-          {/* Info Aerolínea */}
+          {/* Airline Info */}
           <div className="flex items-center gap-4 w-full md:w-auto">
             <img 
               src={flight.airlineLogo || 'https://www.skyscanner.net/images/airline_logos/default.png'} 
@@ -113,7 +109,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
             </div>
           </div>
 
-          {/* Ruta y Duración */}
+          {/* Route & Duration */}
           <div className="flex items-center gap-8 text-center">
             <div>
               <p className="text-lg font-black text-slate-900">
@@ -123,7 +119,6 @@ export default function FlightResults({ data }: FlightResultsProps) {
             </div>
             
             <div className="flex flex-col items-center gap-1 min-w-[100px]">
-              {/* Aquí usamos la nueva función de formato de duración */}
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                 {formatDuration(flight.durationMinutes)}
               </span>
@@ -143,7 +138,7 @@ export default function FlightResults({ data }: FlightResultsProps) {
             </div>
           </div>
 
-          {/* Precio y Reserva */}
+          {/* Price & Booking */}
           <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
             <div className="text-right">
               <p className="text-2xl font-black text-[#0072ce] tracking-tighter">{Math.round(flight.price)} €</p>
