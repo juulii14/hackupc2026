@@ -33,6 +33,13 @@ WRITING RULES (VERY IMPORTANT):
 
 Make sure that the cities you recommend have an aerport.
 
+IMPORTANT ABOUT DESTINATIONS:
+- Only recommend cities that have their own commercial airport with an IATA code
+- Do NOT recommend festivals, regions, islands without airports, or places that are not cities
+- Do NOT recommend places like "Burning Man", "Coachella", "Glastonbury", etc.
+- Examples of valid destinations: "Bangkok", "Tokyo", "Cancún", "Cape Town"
+- Examples of INVALID destinations: "Sahara Desert", "Scottish Highlands", "Burning Man"
+
 Return ONLY a JSON with this structure:
 {{
   "destinations": [
