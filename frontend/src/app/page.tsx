@@ -1,9 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
-import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Coffee, Ticket } from "lucide-react";
-// L'ERROR ESTAVA AQUÍ: Treiem les claus { }
+import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Coffee, Ticket, Music } from "lucide-react";
 import FlightResults from '@/components/FlightResults';
-import { RecepcionInfo } from '@/types/flight';
 
 interface DestinoIA {
   city: string;
@@ -19,16 +17,16 @@ export default function Home() {
   const [result, setResult] = useState<DestinoIA[] | null>(null);
   const [openIndices, setOpenIndices] = useState<number[]>([]);
 
-  // ESTATS TRIP DETAILS (AMB AUTOSUGGEST)
-  const [originCity, setOriginCity] = useState("Barcelona"); // El que es veu
-  const [originIata, setOriginIata] = useState("BCN");       // El que s'usa per a Skyscanner
+  // ESTATS TRIP DETAILS
+  const [originCity, setOriginCity] = useState("");
+  const [originIata, setOriginIata] = useState("");
   const [suggestions, setSuggestions] = useState<{name: string, code: string}[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [travelDate, setTravelDate] = useState("");
   const [adults, setAdults] = useState(1);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
 
-  // ESTATS MUSICA
+  // ESTATS MÚSICA
   const [activeTab, setActiveTab] = useState<"photos" | "music">("photos");
   const [artist, setArtist] = useState("");
   const [track, setTrack] = useState("");
@@ -37,14 +35,11 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  // LÒGICA AUTOSUGGEST (Simulada per a la prova, connecta-la a la teva API si vols)
-  const handleCitySearch = async (query: string) => {
+  // AUTOSUGGEST CIUTATS
+  const handleCitySearch = (query: string) => {
     setOriginCity(query);
-    if (query.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-    // Mock de suggeriments (Això ho pots canviar per una crida a /api/autosuggest)
+    setOriginIata("");
+    if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return; }
     const cities = [
       { name: "Barcelona", code: "BCN" },
       { name: "Madrid", code: "MAD" },
@@ -52,8 +47,13 @@ export default function Home() {
       { name: "Paris", code: "CDG" },
       { name: "New York", code: "JFK" },
       { name: "Tokyo", code: "NRT" },
+      { name: "Amsterdam", code: "AMS" },
+      { name: "Rome", code: "FCO" },
+      { name: "Lisbon", code: "LIS" },
+      { name: "Berlin", code: "BER" },
+      { name: "Dubai", code: "DXB" },
+      { name: "Miami", code: "MIA" },
     ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
-    
     setSuggestions(cities);
     setShowSuggestions(true);
   };
@@ -64,6 +64,7 @@ export default function Home() {
     setShowSuggestions(false);
   };
 
+  // GESTIÓ DEL CANVI DE DATA
   const handleDateChange = (dateValue: string) => {
     setTravelDate(dateValue);
     if (dateValue) {
@@ -72,6 +73,7 @@ export default function Home() {
     }
   };
 
+  // GESTIÓ DE FOTOS
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const remaining = 6 - files.length;
@@ -91,8 +93,9 @@ export default function Home() {
     });
   };
 
+  // CRIDA AL BACKEND PER ANALITZAR FOTOS
   const analyzePhotos = async () => {
-    if (files.length === 0 || !travelDate) return;
+    if (files.length === 0 || !travelDate || !originIata) return;
     setIsAnalyzing(true);
     setResult(null);
     setOpenIndices([]);
@@ -106,26 +109,24 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
-      
       if (!response.ok) throw new Error("Error API");
-      const data = await response.json(); 
-      
+      const data = await response.json();
       const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
         ...dest,
         imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
       }));
-
       setResult(destinosConImagen);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
     } catch (error) {
-      alert("Error connectant amb la IA.");
+      alert("Error connectant amb la IA del backend.");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
+  // CRIDA AL BACKEND PER ANALITZAR MÚSICA
   const analyzeMusic = async () => {
-    if (!artist || !track || !travelDate) return;
+    if (!artist || !track || !travelDate || !originIata) return;
     setIsAnalyzingMusic(true);
     setResult(null);
     setOpenIndices([]);
@@ -136,19 +137,16 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ artist, track }),
       });
-
       if (!response.ok) throw new Error("Error API");
       const data = await response.json();
-
       const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
         ...dest,
         imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
       }));
-
       setResult(destinosConImagen);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
     } catch (error) {
-      alert("Error connectant amb la IA.");
+      alert("Error connectant amb la IA del backend.");
     } finally {
       setIsAnalyzingMusic(false);
     }
@@ -184,11 +182,12 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* GRID PRINCIPAL */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-10">
         
-        {/* ESQUERRA: TRIP DETAILS */}
+        {/* COLUMNA ESQUERRA: TRIP DETAILS + TABS */}
         <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
+          
+          {/* TRIP DETAILS */}
           <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
             <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Trip Details</h3>
             
@@ -197,16 +196,16 @@ export default function Home() {
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={originCity}
                   onChange={(e) => handleCitySearch(e.target.value)}
-                  placeholder="Enter city..."
+                  placeholder="Enter departure city..."
                   className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce] transition-all"
                 />
               </div>
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden animate-in fade-in">
+                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden">
                   {suggestions.map((s, i) => (
                     <button key={i} onClick={() => selectCity(s.name, s.code)} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 flex justify-between">
                       <span>{s.name}</span>
@@ -217,37 +216,47 @@ export default function Home() {
               )}
             </div>
 
-            {/* DATA */}
+            {/* DATA DE SORTIDA */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Departure Date</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
-                <input type="date" value={travelDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => handleDateChange(e.target.value)} className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]" />
+                <input
+                  type="date"
+                  value={travelDate}
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]"
+                />
               </div>
             </div>
 
             {/* PASSATGERS */}
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Travelers</label>
-              <select value={adults} onChange={(e) => setAdults(Number(e.target.value))} className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]">
+              <select
+                value={adults}
+                onChange={(e) => setAdults(Number(e.target.value))}
+                className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]"
+              >
                 {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Adult' : 'Adults'}</option>)}
               </select>
             </div>
           </div>
 
-          {/* PESTANYES */}
+          {/* PESTANYES FOTOS / MÚSICA */}
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("photos")}
-              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all ${activeTab === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
+              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
             >
-              📷 Photos
+              <Camera size={14} /> Photos
             </button>
             <button
               onClick={() => setActiveTab("music")}
-              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all ${activeTab === "music" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
+              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "music" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
             >
-              🎵 Music
+              <Music size={14} /> Music
             </button>
           </div>
 
@@ -259,7 +268,11 @@ export default function Home() {
                 <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
                 <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
               </div>
-              <button disabled={isAnalyzing || files.length === 0 || !travelDate} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+              <button
+                disabled={isAnalyzing || files.length === 0 || !travelDate || !originIata}
+                onClick={analyzePhotos}
+                className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30"
+              >
                 {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
               </button>
             </>
@@ -288,38 +301,50 @@ export default function Home() {
                   />
                 </div>
               </div>
-              <button disabled={isAnalyzingMusic || !artist || !track || !travelDate} onClick={analyzeMusic} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-purple-600 transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+              <button
+                disabled={isAnalyzingMusic || !artist || !track || !travelDate || !originIata}
+                onClick={analyzeMusic}
+                className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-purple-600 transition-all flex items-center justify-center gap-4 disabled:opacity-30"
+              >
                 {isAnalyzingMusic ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE VIBE</>}
               </button>
             </>
           )}
         </div>
 
-        {/* DRETA: MOODBOARD */}
+        {/* COLUMNA DRETA: MOODBOARD */}
         <div className="lg:col-span-8 order-1 lg:order-2 min-h-[500px] relative">
           <div className={`h-full border-4 border-dashed border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-slate-300 ${files.length > 0 ? 'border-none' : ''}`}>
-             {files.length === 0 ? (
-               <><Camera size={48} className="mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-center">Your canvas is waiting</p></>
-             ) : (
-                <div className="relative w-full h-full min-h-[500px]">
-                  {files.map((f, i) => (
-                    <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
-                      <img src={f.preview} alt="mood" className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
-                      <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
-                    </div>
-                  ))}
-                  <div className="absolute bottom-0 right-0 opacity-10 hidden md:block"><Coffee size={100} /></div>
-                </div>
-             )}
+            {activeTab === "music" ? (
+              <div className="flex flex-col items-center gap-4 opacity-30">
+                <Music size={64} />
+                <p className="font-bold uppercase tracking-widest text-center">Enter a song to find your destination</p>
+              </div>
+            ) : files.length === 0 ? (
+              <><Camera size={48} className="mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-center">Your canvas is waiting</p></>
+            ) : (
+              <div className="relative w-full h-full min-h-[500px]">
+                {files.map((f, i) => (
+                  <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
+                    <img src={f.preview} alt="mood" className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
+                    <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+                  </div>
+                ))}
+                <div className="absolute bottom-0 right-0 opacity-10 hidden md:block"><Coffee size={100} /></div>
+              </div>
+            )}
           </div>
-
         </div>
       </div>
 
-      {/* POSTALS (CORREGIT) */}
+      {/* POSTALS DE DESTINS */}
       {result && (
         <div ref={resultsRef} className="max-w-6xl mx-auto px-4 py-16 animate-in fade-in zoom-in">
-          <div className="text-center mb-8"><span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">Els teus matches visuals:</span></div>
+          <div className="text-center mb-8">
+            <span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">
+              {activeTab === "music" ? "Your music matches:" : "Els teus matches visuals:"}
+            </span>
+          </div>
           <div className="flex flex-row gap-8 overflow-x-auto pb-10 justify-center">
             {result.map((dest, idx) => (
               <div key={idx} className="relative min-w-[240px] w-[240px] h-[360px] group">
@@ -332,7 +357,13 @@ export default function Home() {
                   <div className="absolute inset-0 z-10 p-6 flex flex-col justify-end text-white text-left">
                     <span className="text-[10px] font-black uppercase text-white/60">{dest.country}</span>
                     <h3 className="text-2xl font-black uppercase leading-tight">{dest.city}</h3>
-                    <div className="max-h-0 group-hover:max-h-40 overflow-hidden transition-all duration-500">
+                    <div className="max-h-0 group-hover:max-h-48 overflow-hidden transition-all duration-500">
+                      <details className="mt-2">
+                        <summary className="text-[10px] font-black uppercase tracking-widest text-white/60 cursor-pointer hover:text-white transition-colors">
+                          Why this destination?
+                        </summary>
+                        <p className="text-[10px] text-white/70 italic mt-1">{dest.reason}</p>
+                      </details>
                       <button onClick={() => scrollToFlight(idx)} className="mt-4 w-full py-2 bg-[#0072ce] text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-white hover:text-[#0072ce] transition-colors shadow-lg">Check Flights</button>
                     </div>
                   </div>
@@ -353,7 +384,7 @@ export default function Home() {
                 <div className="flex items-center gap-4 text-left">
                   <Ticket className="text-[#0072ce] w-5 h-5" />
                   <div>
-                    <h3 className="font-black text-slate-900 uppercase">Vols a {dest.city}</h3>
+                    <h3 className="font-black text-slate-900 uppercase">Flights to {dest.city}</h3>
                     <p className="text-[10px] text-slate-400 font-bold uppercase">{dest.country}</p>
                   </div>
                 </div>
@@ -361,16 +392,12 @@ export default function Home() {
               </button>
               {isExpanded && (
                 <div className="p-6 pt-0 animate-in slide-in-from-top-2">
-                  <FlightResults data={{ 
-                    num_imagenes: files.length, 
-                    destinos: [{ 
-                      pais: dest.country, 
-                      ciudad: dest.city,
-                      origin: originIata, // Enviem el codi BCN, no el nom
-                      date: travelDate,
-                      adults: adults
-                    }] 
-                  }} />
+                  <FlightResults
+                    originCode={originIata}
+                    destinationCity={dest.city}
+                    adults={adults}
+                    date={travelDate}
+                  />
                 </div>
               )}
             </div>

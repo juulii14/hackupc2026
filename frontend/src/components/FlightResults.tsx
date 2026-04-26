@@ -1,170 +1,120 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Plane, ExternalLink, AlertCircle, Loader2 } from 'lucide-react';
+import { Plane, ExternalLink, AlertCircle, Loader2, Info } from 'lucide-react';
 import { FlightResultData } from '@/types/flight';
 
 interface FlightResultsProps {
-  data: {
-    destinos: Array<{ pais: string; ciudad: string }>;
-    num_imagenes: number;
-  };
+  originCode: string;
+  destinationCity: string;
+  adults: number;
+  date: string;
 }
 
-export default function FlightResults({ data }: FlightResultsProps) {
+export default function FlightResults({ originCode, destinationCity, adults, date }: FlightResultsProps) {
   const [flights, setFlights] = useState<FlightResultData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Función para convertir minutos a formato "Xh Ymin"
   const formatDuration = (totalMinutes: number) => {
+    if (!totalMinutes) return "N/A";
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return `${hours}h ${minutes > 0 ? `${minutes}min` : ''}`;
+    return `${hours}h ${minutes > 0 ? `${minutes}m` : ''}`;
   };
 
   useEffect(() => {
-    const fetchFlights = async () => {
-      if (!data?.destinos || data.destinos.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+    let isMounted = true; 
 
+    const fetchFlights = async () => {
+      if (!destinationCity || !date || !originCode) return;
       setIsLoading(true);
       setError(null);
 
       try {
-        const destination = data.destinos[0].ciudad;
-        const travelDate = "2026-09-15"; 
-
         const response = await fetch('/api/flights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cityCode: destination,
-            adults: 1,
-            date: travelDate
-          }),
+          body: JSON.stringify({ cityCode: destinationCity, originCode, adults, date }),
         });
 
         const result = await response.json();
-        
-        if (!response.ok) throw new Error(result.error || "Failed to fetch flights");
+        if (!response.ok) throw new Error(result.error || "Error al buscar vuelos");
 
-        if (Array.isArray(result)) {
-          setFlights(result);
-        } else if (result && typeof result === 'object' && Array.isArray(result.flights)) {
-          setFlights(result.flights);
-        } else {
-          setFlights([]);
+        if (isMounted) {
+          setFlights(Array.isArray(result) ? result : (result.flights || []));
         }
-
       } catch (err: any) {
-        setError(err.message);
-        setFlights([]); 
+        if (isMounted) setError(err.message);
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchFlights();
-  }, [data]);
+    return () => { isMounted = false; }; 
+  }, [destinationCity, originCode, adults, date]);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-[#0072ce]" />
-        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Searching for the best offers...</p>
-      </div>
-    );
-  }
+  if (isLoading) return (
+    <div className="flex flex-col items-center justify-center py-12 space-y-3">
+      <Loader2 className="w-8 h-8 animate-spin text-[#0072ce]" />
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando el mejor precio...</p>
+    </div>
+  );
 
-  if (error) {
-    return (
-      <div className="flex items-center gap-3 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100">
-        <AlertCircle size={20} />
-        <p className="text-sm font-medium">{error}</p>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-xs font-bold">
+      <AlertCircle className="inline mr-2" size={14} /> {error}
+    </div>
+  );
 
-  if (!Array.isArray(flights) || flights.length === 0) {
-    return (
-      <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-        <p className="text-slate-500 italic">No flights were found for this destination.</p>
-      </div>
-    );
-  }
+  if (flights.length === 0) return (
+    <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+      <Info className="mx-auto mb-2 text-slate-300" size={24} />
+      <p className="text-slate-500 text-xs font-bold">No hay vuelos disponibles para esta fecha.</p>
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      {flights.map((flight) => (
-        <div key={flight.id} className="group bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center justify-between gap-6">
-          
-          {/* Info Aerolínea */}
-          <div className="flex items-center gap-4 w-full md:w-auto">
-            <img 
-              src={flight.airlineLogo || 'https://www.skyscanner.net/images/airline_logos/default.png'} 
-              alt={flight.airlineName}
-              className="w-12 h-12 object-contain rounded-lg border border-slate-50 p-1"
-            />
+    <div className="space-y-3">
+      {flights.map((flight, index) => (
+        <div 
+          key={`${flight.id}-${index}`} // FIX: Key única garantizada
+          className="group bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <img src={flight.airlineLogo} alt={flight.airlineName} className="w-10 h-10 object-contain rounded-lg border p-1" />
             <div>
-              <h4 className="font-black text-slate-900 leading-none mb-1">{flight.airlineName}</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Economy Class</p>
+              <h4 className="font-black text-slate-900 text-xs uppercase tracking-tight">{flight.airlineName}</h4>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{flight.origin} → {flight.destination}</p>
             </div>
           </div>
 
-          {/* Ruta y Duración */}
-          <div className="flex items-center gap-8 text-center">
+          <div className="flex items-center gap-6 text-center grow justify-center">
             <div>
-              <p className="text-lg font-black text-slate-900">
-                {flight.departure ? new Date(flight.departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-              </p>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{flight.origin}</p>
+              <p className="text-sm font-black text-slate-900">{new Date(flight.departure).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
-            
-            <div className="flex flex-col items-center gap-1 min-w-[100px]">
-              {/* Aquí usamos la nueva función de formato de duración */}
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                {formatDuration(flight.durationMinutes)}
-              </span>
-              <div className="w-full h-[2px] bg-slate-100 relative">
-                <Plane size={14} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0072ce]" />
+            <div className="flex flex-col items-center min-w-[80px]">
+              <span className="text-[8px] font-black text-slate-400 uppercase">{formatDuration(flight.durationMinutes)}</span>
+              <div className="w-full h-[1px] bg-slate-200 relative my-1">
+                <Plane size={10} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0072ce]" />
               </div>
-              <span className="text-[10px] font-bold text-[#0072ce] uppercase">
-                {flight.stops === 0 ? 'Direct' : `${flight.stops} ${flight.stops === 1 ? 'stop' : 'stops'}`}
-              </span>
+              <span className="text-[8px] font-bold text-[#0072ce] uppercase">{flight.stops === 0 ? 'Directo' : `${flight.stops} escala/s`}</span>
             </div>
-
             <div>
-              <p className="text-lg font-black text-slate-900">
-                {flight.arrival ? new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-              </p>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">{flight.destination}</p>
+              <p className="text-sm font-black text-slate-900">{new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </div>
           </div>
 
-          {/* Precio y Reserva */}
-          <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
+          <div className="flex items-center gap-4 w-full md:w-auto justify-between border-t md:border-t-0 pt-3 md:pt-0">
             <div className="text-right">
-              <p className="text-2xl font-black text-[#0072ce] tracking-tighter">{Math.round(flight.price)} €</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Final price</p>
+              <p className="text-lg font-black text-[#0072ce] tracking-tighter">{Math.round(flight.price)} €</p>
             </div>
-            
-            <a 
-              href={flight.bookingUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs hover:bg-[#0072ce] transition-all shadow-lg shadow-slate-200"
-            >
-              BOOK NOW <ExternalLink size={14} />
+            <a href={flight.bookingUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-[#0072ce] transition-all">
+              RESERVAR
             </a>
           </div>
         </div>
       ))}
-      
-      <p className="text-center text-[10px] text-slate-400 font-bold uppercase tracking-widest pt-4">
-        Powered by Skyscanner Partners API
-      </p>
     </div>
   );
 }

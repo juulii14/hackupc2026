@@ -7,7 +7,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 ANALYSIS_PROMPT = """
-You are a travel expert. Analyze this image and recommend travel destinations.
+You are a travel expert. Analyze this image and recommend 4 travel destinations.
 
 From the image, extract:
 - The environment (beach, mountain, city, jungle, desert...)
@@ -30,6 +30,8 @@ WRITING RULES (VERY IMPORTANT):
 - Do NOT use phrases like "the image shows", "the image depicts", "in the picture", etc.
 - Focus ONLY on the travel recommendation and its reasoning
 - Write naturally, as if you are giving travel advice
+
+Make sure that the cities you recommend have an aerport.
 
 Return ONLY a JSON with this structure:
 {{

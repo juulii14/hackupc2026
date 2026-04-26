@@ -5,63 +5,46 @@ const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    let { cityCode, adults, date } = body;
+    const { cityCode, adults, date, originCode } = await req.json();
 
-    // 1. Lógica de Destinos (Barcelona BCN como Origen)
-    let iata = cityCode;
-    
-    // Si no viene ciudad o hay error, buscamos Cancún (CUN) o Phuket (HKT)
-    if (!cityCode || cityCode.length > 3) {
+    if (!cityCode || !date) {
+      return NextResponse.json({ error: "Faltan datos de destino o fecha" }, { status: 400 });
+    }
+
+    // 1. IATA Dinámico (No más Madrid fijo)
+    let destinationIata = '';
+    if (cityCode?.length === 3 && cityCode === cityCode.toUpperCase()) {
+      destinationIata = cityCode; 
+    } else {
       const detected = await skyscannerService.getIataCode(cityCode);
-      
-      if (!detected) {
-        // Si no detecta la ciudad, elegimos Cancún como fallback
-        iata = 'CUN'; 
-        console.log("⚠️ No se detectó IATA, usando Cancún (CUN) por defecto");
-      } else {
-        iata = detected;
-      }
+      if (!detected) throw new Error(`No se encontró código para: ${cityCode}`);
+      destinationIata = detected;
     }
 
-    // Seguridad: Si intentamos buscar BCN a BCN, lo cambiamos a Phuket
-    if (iata.toUpperCase() === 'BCN') {
-      iata = 'HKT';
-      console.log("🔄 Destino era Barcelona, cambiado a Phuket (HKT) para evitar conflicto");
-    }
-
-    console.log(`✈️ Buscando: BCN a ${iata} para el ${date}`);
-
-    // 2. Crear sesión (Origen fijado en BCN)
+    // 2. Crear búsqueda
     const sessionData = await skyscannerService.createFlightSearch({
-      originCode: 'BCN', 
-      destCode: iata,
-      adults: adults || 1,
+      originCode: originCode || 'BCN',
+      destCode: destinationIata,
+      adults: Number(adults) || 1,
       date: date
     });
 
-    const sessionToken = sessionData.sessionToken;
+    const token = sessionData.sessionToken;
+    if (!token) return NextResponse.json({ error: "Error al iniciar sesión en Skyscanner" }, { status: 500 });
 
-    if (!sessionToken) {
-      return NextResponse.json({ error: "No session token", details: sessionData }, { status: 500 });
-    }
+    // 3. Polling con reintentos
+    await sleep(1500);
+    let flights = await skyscannerService.getSearchUpdate(token);
 
-    // 3. ESPERA DE SEGURIDAD
-    await sleep(2000);
-
-    // 4. Obtener resultados
-    let flights = await skyscannerService.getSearchUpdate(sessionToken);
-
-    // 5. Re-intento si sale vacío
     if (flights.length === 0) {
-      await sleep(1500);
-      flights = await skyscannerService.getSearchUpdate(sessionToken);
+      await sleep(2500); // Damos más tiempo si no hay nada
+      flights = await skyscannerService.getSearchUpdate(token);
     }
 
     return NextResponse.json(flights);
 
   } catch (error: any) {
-    console.error("🔥 Error crítico:", error.message);
+    console.error("API Route Error:", error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

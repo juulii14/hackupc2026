@@ -7,7 +7,7 @@ logger = get_logger(__name__)
 
 SONG_PROMPT = """
 You are a travel expert. Based on the song "{artist} - {track}" and its musical tags, 
-recommend 5 travel destinations.
+recommend 4 travel destinations.
 
 Musical tags: {tags}
 
