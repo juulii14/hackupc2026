@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = True
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    
+    # Token
+    SKYSCANNER_KEY: str = ""
 
     # Ollama
     OLLAMA_BASE_URL: str = "http://localhost:11434"
