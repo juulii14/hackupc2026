@@ -71,7 +71,9 @@ export const skyscannerService = {
       });
       const data = await res.json();
       const place = data.places?.find((p: any) => p.iataCode);
+      console.log(`🔍 IATA detectat per "${cityName}": ${place?.iataCode}`);
       return place?.iataCode || data.places?.[0]?.entityId || null;
+    
     } catch (error) {
       console.error("Error buscando IATA:", error);
       return null;

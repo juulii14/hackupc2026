@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const { cityCode, adults, date, originCode } = await req.json();
 
     if (!cityCode || !date) {
-      return NextResponse.json({ error: "Faltan datos de destino o fecha" }, { status: 400 });
+      return NextResponse.json({ error: "Destination or date missing" }, { status: 400 });
     }
 
     // 1. IATA Dinámico (No más Madrid fijo)
@@ -17,20 +17,31 @@ export async function POST(req: Request) {
       destinationIata = cityCode; 
     } else {
       const detected = await skyscannerService.getIataCode(cityCode);
-      if (!detected) throw new Error(`No se encontró código para: ${cityCode}`);
+      if (!detected) throw new Error(`No IATA code was found for: ${cityCode}`);
       destinationIata = detected;
     }
 
     // 2. Crear búsqueda
-    const sessionData = await skyscannerService.createFlightSearch({
+    let sessionData = await skyscannerService.createFlightSearch({
       originCode: originCode || 'BCN',
       destCode: destinationIata,
       adults: Number(adults) || 1,
       date: date
     });
 
+    if (!sessionData.sessionToken) {
+      await new Promise(res => setTimeout(res, 2000));
+      sessionData = await skyscannerService.createFlightSearch({
+        originCode: originCode || 'BCN',
+        destCode: destinationIata,
+        adults: Number(adults) || 1,
+        date: date
+      });
+    }
+
+
     const token = sessionData.sessionToken;
-    if (!token) return NextResponse.json({ error: "Error al iniciar sesión en Skyscanner" }, { status: 500 });
+    if (!token) return NextResponse.json({ error: "Internal Error" }, { status: 500 });
 
     // 3. Polling con reintentos
     await sleep(1500);
@@ -40,6 +51,18 @@ export async function POST(req: Request) {
       await sleep(2500); // Damos más tiempo si no hay nada
       flights = await skyscannerService.getSearchUpdate(token);
     }
+
+    // Filtrar per data exacta
+    const [year, month, day] = date.split('-').map(Number);
+    flights = flights.filter((flight: any) => {
+      if (!flight.departure) return true;
+      const flightDate = new Date(flight.departure);
+      return (
+        flightDate.getFullYear() === year &&
+        flightDate.getMonth() + 1 === month &&
+        flightDate.getDate() === day
+      );
+    });
 
     return NextResponse.json(flights);
 

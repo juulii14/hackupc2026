@@ -57,7 +57,7 @@ export default function FlightResults({ originCode, destinationCity, adults, dat
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center py-12 space-y-3">
       <Loader2 className="w-8 h-8 animate-spin text-[#0072ce]" />
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Buscando el mejor precio...</p>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Searching for the best price...</p>
     </div>
   );
 
@@ -70,7 +70,7 @@ export default function FlightResults({ originCode, destinationCity, adults, dat
   if (flights.length === 0) return (
     <div className="text-center py-8 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
       <Info className="mx-auto mb-2 text-slate-300" size={24} />
-      <p className="text-slate-500 text-xs font-bold">No hay vuelos disponibles para esta fecha.</p>
+      <p className="text-slate-500 text-xs font-bold">There are no available flights for this date.</p>
     </div>
   );
 
@@ -98,7 +98,7 @@ export default function FlightResults({ originCode, destinationCity, adults, dat
               <div className="w-full h-[1px] bg-slate-200 relative my-1">
                 <Plane size={10} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[#0072ce]" />
               </div>
-              <span className="text-[8px] font-bold text-[#0072ce] uppercase">{flight.stops === 0 ? 'Directo' : `${flight.stops} escala/s`}</span>
+              <span className="text-[8px] font-bold text-[#0072ce] uppercase">{flight.stops === 0 ? 'Direct' : `${flight.stops} Scale/s`}</span>
             </div>
             <div>
               <p className="text-sm font-black text-slate-900">{new Date(flight.arrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -110,7 +110,7 @@ export default function FlightResults({ originCode, destinationCity, adults, dat
               <p className="text-lg font-black text-[#0072ce] tracking-tighter">{Math.round(flight.price)} €</p>
             </div>
             <a href={flight.bookingUrl} target="_blank" rel="noopener noreferrer" className="bg-slate-900 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase hover:bg-[#0072ce] transition-all">
-              RESERVAR
+              BOOK NOW
             </a>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Coffee, Ticket, Music } from "lucide-react";
+import { Camera, Plane, Loader2, Calendar, X, MapPin, Sparkles, Folder, Ticket, Music } from "lucide-react";
 import FlightResults from '@/components/FlightResults';
 
 interface DestinoIA {
@@ -111,14 +111,16 @@ export default function Home() {
       });
       if (!response.ok) throw new Error("Error API");
       const data = await response.json();
-      const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
-        ...dest,
-        imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
-      }));
+      const destinosConImagen = data.destinations
+        .filter((dest: any) => dest.city.toLowerCase() !== originCity.toLowerCase())
+        .map((dest: any, index: number) => ({
+          ...dest,
+          imageUrl: `https://picsum.photos/seed/${encodeURIComponent(dest.city)}/400/600`
+        }));
       setResult(destinosConImagen);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
     } catch (error) {
-      alert("Error connectant amb la IA del backend.");
+      alert("We didn't find this song :(.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -139,10 +141,15 @@ export default function Home() {
       });
       if (!response.ok) throw new Error("Error API");
       const data = await response.json();
-      const destinosConImagen = data.destinations.map((dest: any, index: number) => ({
-        ...dest,
-        imageUrl: `https://loremflickr.com/400/600/${encodeURIComponent(dest.city)},landscape,travel/all?lock=${index + Math.floor(Math.random() * 100)}`
-      }));
+      const destinosConImagen = data.destinations
+ .filter((dest: any) => {
+    const destCity = dest.city.toLowerCase().trim();
+    const origin = originCity.toLowerCase().trim();
+    return !destCity.includes(origin) && !origin.includes(destCity);
+  })        .map((dest: any, index: number) => ({
+          ...dest,
+imageUrl: `https://picsum.photos/seed/${encodeURIComponent(dest.city)}/400/600`
+        }));
       setResult(destinosConImagen);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth' }), 500);
     } catch (error) {
@@ -176,174 +183,130 @@ export default function Home() {
             <Plane className="text-white w-6 h-6" />
           </div>
           <div>
-            <span className="text-2xl font-black tracking-tighter text-slate-900 block leading-none uppercase">SkyLens</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#0072ce]">by Skyscanner vibe</span>
+            <span className="text-2xl font-black tracking-tighter text-slate-900 block leading-none">VibeScanner</span>
+            <span className="text-[10px] font-bold text-[#0072ce]">powered by SkyScanner</span>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-10">
+<div className="max-w-6xl mx-auto space-y-8 mb-10">
+  
+  {/* FILA SUPERIOR: TRIP DETAILS + FORMULARI */}
+  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+    
+    {/* TRIP DETAILS */}
+    <div className="lg:col-span-5">
+      <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
+        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Trip Details</h3>
         
-        {/* COLUMNA ESQUERRA: TRIP DETAILS + TABS */}
-        <div className="lg:col-span-4 space-y-8 order-2 lg:order-1">
-          
-          {/* TRIP DETAILS */}
-          <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Trip Details</h3>
-            
-            {/* ORIGEN AMB AUTOSUGGEST */}
-            <div className="space-y-1 relative">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
-                <input
-                  type="text"
-                  value={originCity}
-                  onChange={(e) => handleCitySearch(e.target.value)}
-                  placeholder="Enter departure city..."
-                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce] transition-all"
-                />
-              </div>
-              {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden">
-                  {suggestions.map((s, i) => (
-                    <button key={i} onClick={() => selectCity(s.name, s.code)} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 flex justify-between">
-                      <span>{s.name}</span>
-                      <span className="text-[10px] text-slate-300 font-mono">{s.code}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* DATA DE SORTIDA */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Departure Date</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
-                <input
-                  type="date"
-                  value={travelDate}
-                  min={new Date().toISOString().split('T')[0]}
-                  onChange={(e) => handleDateChange(e.target.value)}
-                  className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]"
-                />
-              </div>
-            </div>
-
-            {/* PASSATGERS */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Travelers</label>
-              <select
-                value={adults}
-                onChange={(e) => setAdults(Number(e.target.value))}
-                className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]"
-              >
-                {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Adult' : 'Adults'}</option>)}
-              </select>
-            </div>
+        <div className="space-y-1 relative">
+          <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">From</label>
+          <div className="relative">
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
+            <input type="text" value={originCity} onChange={(e) => handleCitySearch(e.target.value)} placeholder="Enter departure city..." className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce] transition-all" />
           </div>
-
-          {/* PESTANYES FOTOS / MÚSICA */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab("photos")}
-              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
-            >
-              <Camera size={14} /> Photos
-            </button>
-            <button
-              onClick={() => setActiveTab("music")}
-              className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "music" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
-            >
-              <Music size={14} /> Music
-            </button>
-          </div>
-
-          {activeTab === "photos" ? (
-            <>
-              <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
-                <Folder className="text-yellow-600 mb-2" size={32} />
-                <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add visual vibe photos</h3>
-                <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
-                <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
-              </div>
-              <button
-                disabled={isAnalyzing || files.length === 0 || !travelDate || !originIata}
-                onClick={analyzePhotos}
-                className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30"
-              >
-                {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE MOOD</>}
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="bg-white p-6 shadow-xl border-t-4 border-purple-500 space-y-4">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Song Details</h3>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Artist</label>
-                  <input
-                    type="text"
-                    value={artist}
-                    onChange={(e) => setArtist(e.target.value)}
-                    placeholder="Ex: Bad Bunny"
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Track</label>
-                  <input
-                    type="text"
-                    value={track}
-                    onChange={(e) => setTrack(e.target.value)}
-                    placeholder="Ex: Tití Me Preguntó"
-                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all"
-                  />
-                </div>
-              </div>
-              <button
-                disabled={isAnalyzingMusic || !artist || !track || !travelDate || !originIata}
-                onClick={analyzeMusic}
-                className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-purple-600 transition-all flex items-center justify-center gap-4 disabled:opacity-30"
-              >
-                {isAnalyzingMusic ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE VIBE</>}
-              </button>
-            </>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-[100] w-full mt-1 bg-white border border-slate-200 shadow-2xl rounded-xl overflow-hidden">
+              {suggestions.map((s, i) => (
+                <button key={i} onClick={() => selectCity(s.name, s.code)} className="w-full text-left px-4 py-3 text-sm font-bold text-slate-600 hover:bg-blue-50 flex justify-between">
+                  <span>{s.name}</span>
+                  <span className="text-[10px] text-slate-300 font-mono">{s.code}</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {/* COLUMNA DRETA: MOODBOARD */}
-        <div className="lg:col-span-8 order-1 lg:order-2 min-h-[500px] relative">
-          <div className={`h-full border-4 border-dashed border-slate-200 rounded-[40px] flex flex-col items-center justify-center p-12 text-slate-300 ${files.length > 0 ? 'border-none' : ''}`}>
-            {activeTab === "music" ? (
-              <div className="flex flex-col items-center gap-4 opacity-30">
-                <Music size={64} />
-                <p className="font-bold uppercase tracking-widest text-center">Enter a song to find your destination</p>
-              </div>
-            ) : files.length === 0 ? (
-              <><Camera size={48} className="mb-4 opacity-20" /><p className="font-bold uppercase tracking-widest text-center">Your canvas is waiting</p></>
-            ) : (
-              <div className="relative w-full h-full min-h-[500px]">
-                {files.map((f, i) => (
-                  <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
-                    <img src={f.preview} alt="mood" className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
-                    <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
-                  </div>
-                ))}
-                <div className="absolute bottom-0 right-0 opacity-10 hidden md:block"><Coffee size={100} /></div>
-              </div>
-            )}
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Departure Date</label>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0072ce] w-4 h-4" />
+            <input type="date" value={travelDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => handleDateChange(e.target.value)} className="w-full pl-10 pr-3 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]" />
           </div>
         </div>
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Travelers</label>
+          <select value={adults} onChange={(e) => setAdults(Number(e.target.value))} className="w-full p-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-[#0072ce]">
+            {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n} {n === 1 ? 'Adult' : 'Adults'}</option>)}
+          </select>
+        </div>
       </div>
+    </div>
+
+    {/* PESTANYES + FORMULARI */}
+    <div className="lg:col-span-7 space-y-4">
+      <div className="flex gap-2">
+        <button onClick={() => setActiveTab("photos")} className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "photos" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}>
+          <Camera size={14} /> Photos
+        </button>
+        <button onClick={() => setActiveTab("music")} className={`flex-1 py-2 font-black text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${activeTab === "music" ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}>
+          <Music size={14} /> Music
+        </button>
+      </div>
+
+      {activeTab === "photos" ? (
+        <>
+          <div onClick={() => files.length < 6 && fileInputRef.current?.click()} className={`group cursor-pointer bg-[#fff9db] p-8 shadow-lg border-2 border-dashed border-yellow-400/50 relative transform transition-all ${files.length >= 6 ? 'opacity-50' : 'hover:scale-[1.01]'}`}>
+            <Folder className="text-yellow-600 mb-2" size={32} />
+            <h3 className="text-lg font-bold text-yellow-900 leading-tight">Add your photos</h3>
+            <p className="text-xs text-yellow-700 mt-2 italic">{files.length >= 6 ? "Moodboard full" : "Max 6 photos allowed"}</p>
+            <input type="file" multiple hidden ref={fileInputRef} onChange={handleFileChange} accept="image/*" />
+          </div>
+          <button disabled={isAnalyzing || files.length === 0 || !travelDate || !originIata} onClick={analyzePhotos} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-[#0072ce] transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+            {isAnalyzing ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE YOUR VIBE</>}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="bg-white p-6 shadow-xl border-t-4 border-[#0072ce] space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Song Details</h3>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Artist</label>
+              <input type="text" value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="Ex: Bad Bunny" className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Track</label>
+              <input type="text" value={track} onChange={(e) => setTrack(e.target.value)} placeholder="Ex: Tití Me Preguntó" className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold text-slate-700 outline-none focus:border-purple-500 transition-all" />
+            </div>
+          </div>
+          <button disabled={isAnalyzingMusic || !artist || !track || !travelDate || !originIata} onClick={analyzeMusic} className="w-full bg-slate-900 text-white p-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-purple-600 transition-all flex items-center justify-center gap-4 disabled:opacity-30">
+            {isAnalyzingMusic ? <Loader2 className="animate-spin" /> : <><Sparkles size={20} /> ANALYZE VIBE</>}
+          </button>
+        </>
+      )}
+    </div>
+  </div>
+
+  {/* CANVAS A SOTA */}
+{activeTab === "photos" && (
+  <div className={`min-h-[500px] border-4 border-dashed border-slate-400 flex flex-col items-center justify-center p-12 text-slate-500 rounded-[40px] ${files.length > 0 ? 'border-none' : ''}`}>
+    {files.length === 0 ? (
+      <><Camera size={48} className="mb-4 text-slate-500" /><p className="font-bold uppercase tracking-widest text-center">Your canvas is waiting</p></>
+    ) : (
+      <div className="relative w-full h-full min-h-[500px]">
+        {files.map((f, i) => (
+          <div key={i} className="polaroid absolute group" style={{ left: `${(i % 3) * 25 + 5}%`, top: `${Math.floor(i / 3) * 35 + 5}%`, "--rotation": `${f.rotation}deg` } as any}>
+            <img src={f.preview} alt="mood" className="w-40 h-40 object-cover grayscale-[0.2] hover:grayscale-0 transition-all" />
+            <button onClick={() => removeFile(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12} /></button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
+
+</div>
 
       {/* POSTALS DE DESTINS */}
       {result && (
         <div ref={resultsRef} className="max-w-6xl mx-auto px-4 py-16 animate-in fade-in zoom-in">
           <div className="text-center mb-8">
-            <span className="handwritten text-xl text-[#0072ce] -rotate-2 inline-block">
-              {activeTab === "music" ? "Your music matches:" : "Els teus matches visuals:"}
-            </span>
+<div className="text-center mb-8">
+  <span className="inline-block text-2xl font-black text-[#0072ce] tracking-tight border-b-4 border-[#0072ce] pb-1">
+    {activeTab === "music" ? "✦ Your music matches" : "✦ Your visual matches"}
+  </span>
+</div>
           </div>
           <div className="flex flex-row gap-8 overflow-x-auto pb-10 justify-center">
             {result.map((dest, idx) => (
